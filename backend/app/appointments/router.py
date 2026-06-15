@@ -8,6 +8,7 @@ from app.core.database import get_db
 from app.models.appointment import Appointment as AppointmentModel
 from app.models.patient import Patient as PatientModel
 from app.auth.router import get_current_user_orm
+from app.auth.permissions import require_clinical_delete
 from app.models.user import User
 from app.analytics.audit import log_action
 
@@ -172,7 +173,7 @@ def update_appointment(
 def delete_appointment(
     appointment_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user_orm),
+    current_user: User = Depends(require_clinical_delete),
 ):
     row = db.query(AppointmentModel).filter(AppointmentModel.id == appointment_id).first()
     if not row:

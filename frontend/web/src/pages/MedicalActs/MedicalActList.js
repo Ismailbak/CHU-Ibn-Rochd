@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { getMedicalActs, deleteMedicalAct } from '../../api/api';
+import { canDeleteClinicalRecords } from '../../utils/permissions';
 
 function MedicalActList({ onSelect }) {
   const [acts, setActs] = useState([]);
+  const canDelete = canDeleteClinicalRecords();
 
   useEffect(() => {
     loadActs();
@@ -41,7 +43,7 @@ function MedicalActList({ onSelect }) {
               <td>{act.status}</td>
               <td>
                 <button onClick={() => onSelect && onSelect(act)}>View</button>
-                <button onClick={() => handleDelete(act.id)}>Delete</button>
+                {canDelete && <button onClick={() => handleDelete(act.id)}>Delete</button>}
               </td>
             </tr>
           ))}

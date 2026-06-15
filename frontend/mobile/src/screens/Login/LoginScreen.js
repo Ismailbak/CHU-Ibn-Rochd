@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { login } from '../../api/api';
+import { login, getCurrentUser } from '../../api/api';
 import { colors, fonts, spacing, radius } from '../../styles/theme';
 import Input from '../../components/common/Input';
 import PrimaryButton from '../../components/common/PrimaryButton';
@@ -24,6 +24,9 @@ export default function LoginScreen({ navigation }) {
     try {
       const res = await login(username, password);
       await AsyncStorage.setItem('token', res.data.access_token);
+      const userRes = await getCurrentUser();
+      const userProfile = userRes.data.user || userRes.data;
+      await AsyncStorage.setItem('user', JSON.stringify(userProfile));
       navigation.replace('Main');
     } catch (e) {
       const isNetworkIssue = e.code === 'ECONNABORTED' || !e.response;

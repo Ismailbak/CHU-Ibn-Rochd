@@ -1,7 +1,8 @@
 ﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Modal, ScrollView, Alert, TextInput } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { getAppointments, createAppointment, getPatients, deleteAppointment } from '../../api/api';
+import { getAppointments, createAppointment, getPatients, deleteAppointment, updateAppointment } from '../../api/api';
+import { isNurse } from '../../utils/permissions';
 import { colors, fonts, spacing, radius } from '../../styles/theme';
 import PhoneShell from '../../components/common/PhoneShell';
 import PrimaryButton from '../../components/common/PrimaryButton';
@@ -49,13 +50,13 @@ function SummaryPill({ value, label, icon }) {
   );
 }
 
-function AppointmentCard({ item, onDelete }) {
+function AppointmentCard({ item, onLongPress }) {
   const state = STATUS[item.status] || STATUS.scheduled;
   const date = item.datetime_scheduled ? new Date(item.datetime_scheduled) : null;
   const time = date ? date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
 
   return (
-    <TouchableOpacity style={styles.appointmentCard} activeOpacity={0.86} onLongPress={() => onDelete(item.id)}>
+    <TouchableOpacity style={styles.appointmentCard} activeOpacity={0.86} onLongPress={() => onLongPress(item)}>
       <View style={styles.timeBox}>
         <Text style={styles.timeText}>{time}</Text>
         <Text style={styles.timeLabel}>RDV</Text>
@@ -144,6 +145,39 @@ export default function AppointmentsScreen() {
     ]);
   };
 
+  const handleCancel = (item) => {
+    Alert.alert('Annuler le rendez-vous', 'Marquer ce rendez-vous comme annulé ?', [
+      { text: 'Non', style: 'cancel' },
+      {
+        text: 'Annuler le RDV',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await updateAppointment(item.id, {
+              patient_id: item.patient_id,
+              datetime_scheduled: item.datetime_scheduled,
+              reason: item.reason,
+              status: 'cancelled',
+            });
+            fetchData();
+          } catch {
+            Alert.alert('Erreur', 'Impossible d\'annuler le rendez-vous.');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleAppointmentLongPress = async (item) => {
+    if (item.status === 'cancelled' || item.status === 'completed') return;
+    const nurse = await isNurse();
+    if (nurse) {
+      handleCancel(item);
+    } else {
+      handleDelete(item.id);
+    }
+  };
+
   const grouped = useMemo(() => groupByDate(appointments), [appointments]);
   const today = new Date().toISOString().split('T')[0];
   const todayCount = appointments.filter((apt) => apt.datetime_scheduled?.startsWith(today)).length;
@@ -180,7 +214,7 @@ export default function AppointmentsScreen() {
               <Text style={styles.dateLabel}>{formatDateLabel(item.date)}</Text>
               <Text style={styles.dateCount}>{item.items.length}</Text>
             </View>
-            {item.items.map((apt) => <AppointmentCard key={String(apt.id)} item={apt} onDelete={handleDelete} />)}
+            {item.items.map((apt) => <AppointmentCard key={String(apt.id)} item={apt} onLongPress={handleAppointmentLongPress} />)}
           </View>
         )}
         ListEmptyComponent={

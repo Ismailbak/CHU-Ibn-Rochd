@@ -3,24 +3,29 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
 const getDevApiUrl = () => {
-  const hostUri = Constants.expoConfig?.hostUri || Constants.manifest2?.extra?.expoClient?.hostUri;
-  const host = hostUri?.split(':')[0];
+  const debuggerHost =
+    Constants.expoGoConfig?.debuggerHost
+    || Constants.expoConfig?.hostUri
+    || Constants.manifest2?.extra?.expoClient?.hostUri;
+
+  const host = debuggerHost?.split(':')[0];
 
   if (host) {
     return `http://${host}:8000/api`;
   }
 
-  return 'http://10.13.1.81:8000/api';
+  return 'http://localhost:8000/api';
 };
 
+export const getApiUrl = getDevApiUrl;
 export const API_URL = getDevApiUrl();
 
 const api = axios.create({
-  baseURL: API_URL,
   timeout: 10000,
 });
 
 api.interceptors.request.use(async (config) => {
+  config.baseURL = getDevApiUrl();
   const token = await AsyncStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -31,6 +36,8 @@ api.interceptors.request.use(async (config) => {
 // ─── Auth ────────────────────────────────────────────────────────────────────
 export const login = (username, password) =>
   api.post('/auth/login', new URLSearchParams({ username, password }));
+
+export const getCurrentUser = () => api.get('/auth/me');
 
 // ─── Patients ────────────────────────────────────────────────────────────────
 export const getPatients = (q) =>

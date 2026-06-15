@@ -18,6 +18,7 @@ from app.core.database import get_db
 from app.models.medical_act import MedicalAct as MedicalActModel, ActDocument as ActDocumentModel, MedicalActStaff as MedicalActStaffModel, ActDiagnosis as ActDiagnosisModel, ActTreatment as ActTreatmentModel
 from app.models.patient import Patient as PatientModel
 from app.auth.router import get_current_user_orm
+from app.auth.permissions import require_clinical_delete
 from app.models.user import User
 from app.analytics.audit import log_action
 from app.models.form_system import ActForm, DynamicFormResponse, RefFormType
@@ -567,7 +568,7 @@ def update_medical_act(
 def delete_medical_act(
     act_id: int, 
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user_orm),
+    current_user: User = Depends(require_clinical_delete),
 ):
     """Deletes an act by ID and all related records (diagnoses, treatments, documents, staff). Raises 404 if not found."""
     row = db.query(MedicalActModel).filter(MedicalActModel.id == act_id).first()

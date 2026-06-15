@@ -5,6 +5,7 @@ import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonTableRow, useToast } from '../../components/common';
 import { getPatients, createPatient, updatePatient, deletePatient } from '../../api/api';
+import { canDeleteClinicalRecords } from '../../utils/permissions';
 import PatientForm from './PatientForm';
 import './PatientsPage.css';
 
@@ -33,6 +34,7 @@ function mapApiPatientToUi(p) {
 
 function PatientsPage() {
   const navigate = useNavigate();
+  const canDeletePatient = canDeleteClinicalRecords();
   const [patients, setPatients] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('Tous');
@@ -457,9 +459,11 @@ function PatientsPage() {
                           <button className="action-btn edit" title="Modifier" onClick={() => handleEditClick(patient)}>
                             <FiEdit2 />
                           </button>
-                          <button className="action-btn delete" title="Supprimer" onClick={() => handleDeleteClick(patient)}>
-                            <FiTrash2 />
-                          </button>
+                          {canDeletePatient && (
+                            <button className="action-btn delete" title="Supprimer" onClick={() => handleDeleteClick(patient)}>
+                              <FiTrash2 />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

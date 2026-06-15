@@ -1,0 +1,123 @@
+{
+  "description": "Gold set for structured RAG retrieval metrics (no LLM). Calibrated against CHUIR dev DB, June 2026.",
+  "default_user_id": 14,
+  "k_values": [5, 10],
+  "cases": [
+    {
+      "id": "demo_18874",
+      "query": "Qui est le patient AGHLALOU?",
+      "patient_id": 18874,
+      "relevant_source_types": ["patient", "patient_note"],
+      "must_include_keywords": ["AGHLALOU", "P018874"],
+      "required_source_types": ["patient"]
+    },
+    {
+      "id": "demo_3",
+      "query": "Informations sur Amina NOUREDDINE",
+      "patient_id": 3,
+      "relevant_source_types": ["patient", "patient_note"],
+      "must_include_keywords": ["NOUREDDINE", "P000003"],
+      "required_source_types": ["patient"]
+    },
+    {
+      "id": "overview_3",
+      "query": "Resume complet du dossier patient",
+      "patient_id": 3,
+      "relevant_source_types": ["patient", "patient_note", "medical_act", "appointment", "act_result"],
+      "must_include_keywords": ["NOUREDDINE"],
+      "required_source_types": ["patient", "medical_act"]
+    },
+    {
+      "id": "appt_past_3",
+      "query": "Historique des rendez-vous passes",
+      "patient_id": 3,
+      "relevant_source_types": ["appointment"],
+      "required_source_types": ["appointment"],
+      "notes": "Appointments rank after patient demographics under current fact_ranking priorities"
+    },
+    {
+      "id": "appt_18874",
+      "query": "Rendez-vous du patient",
+      "patient_id": 18874,
+      "relevant_source_types": ["appointment"],
+      "must_include_keywords": ["2026-05-13"],
+      "required_source_types": ["appointment"]
+    },
+    {
+      "id": "acts_18874",
+      "query": "Consultation et actes medicaux",
+      "patient_id": 18874,
+      "relevant_source_types": ["medical_act"],
+      "must_include_keywords": ["Consultation de Garde"],
+      "required_source_types": ["medical_act"]
+    },
+    {
+      "id": "acts_3",
+      "query": "Derniers actes medicaux",
+      "patient_id": 3,
+      "relevant_source_types": ["medical_act"],
+      "must_include_keywords": ["Consultation"],
+      "required_source_types": ["medical_act"]
+    },
+    {
+      "id": "treatment_3",
+      "query": "Quels traitements ont ete prescrits?",
+      "patient_id": 3,
+      "relevant_source_types": ["medical_act"],
+      "required_source_types": ["medical_act"]
+    },
+    {
+      "id": "diagnosis_3",
+      "query": "Diagnostic et pathologie du patient",
+      "patient_id": 3,
+      "relevant_source_types": ["medical_act", "patient"],
+      "required_source_types": ["medical_act"]
+    },
+    {
+      "id": "lab_3",
+      "query": "Resultats biologiques et analyses",
+      "patient_id": 3,
+      "relevant_source_types": ["act_result"],
+      "required_source_types": ["act_result"],
+      "expect_miss": true,
+      "notes": "DB has zero act_result rows; documents retrieval gap for lab queries"
+    },
+    {
+      "id": "overview_18874",
+      "query": "Decrire le cas clinique complet",
+      "patient_id": 18874,
+      "relevant_source_types": ["patient", "medical_act", "appointment", "act_result"],
+      "must_include_keywords": ["AGHLALOU"],
+      "required_source_types": ["patient", "medical_act"]
+    },
+    {
+      "id": "hospital_2",
+      "query": "Hospitalisation et sejour",
+      "patient_id": 2,
+      "relevant_source_types": ["medical_act"],
+      "must_include_keywords": ["Hospitalisation"],
+      "required_source_types": ["medical_act"]
+    },
+    {
+      "id": "gender_18874",
+      "query": "Quel est le sexe du patient?",
+      "patient_id": 18874,
+      "relevant_source_types": ["patient"],
+      "must_include_keywords": ["Femme"],
+      "required_source_types": ["patient"]
+    },
+    {
+      "id": "invalid_patient",
+      "query": "Resume du dossier",
+      "patient_id": 99999,
+      "expect_empty": true
+    },
+    {
+      "id": "unauthorized_user",
+      "query": "Resume du dossier patient",
+      "patient_id": 3,
+      "user_id": 99999,
+      "expect_empty": true
+    }
+  ]
+}

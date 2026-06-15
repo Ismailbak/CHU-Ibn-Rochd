@@ -10,7 +10,8 @@ from sqlalchemy.exc import IntegrityError
 from app.core.database import get_db
 from app.models.patient import Patient as PatientModel
 from app.models.patient_allergy import PatientAllergy as PatientAllergyModel
-from app.auth.router import get_current_user_orm, RoleChecker
+from app.auth.router import get_current_user_orm
+from app.auth.permissions import require_clinical_delete
 from app.models.user import User
 from app.models.medical_act import MedicalAct, ActDiagnosis
 from app.models.appointment import Appointment
@@ -439,7 +440,7 @@ def update_patient(
 def delete_patient(
     patient_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(RoleChecker(["admin", "doctor", "department_head"])),
+    current_user: User = Depends(require_clinical_delete),
 ):
     db_patient = db.query(PatientModel).filter(PatientModel.id == patient_id).first()
     if not db_patient:

@@ -5,6 +5,7 @@ import {
   FiAlertCircle, FiUser, FiPhone, FiCheckCircle 
 } from 'react-icons/fi';
 import api from '../../api/api';
+import { specialtyToRole } from '../../utils/permissions';
 import '../Login/LoginPage.css';
 import './SignupPage.css';
 
@@ -85,7 +86,7 @@ function SignupPage() {
         phone: formData.phone,
         specialty: formData.specialty,
         department: formData.department,
-        role: 'doctor',
+        role: specialtyToRole(formData.specialty),
       });
       setIsLoading(false);
       navigate('/'); // Redirect to login page

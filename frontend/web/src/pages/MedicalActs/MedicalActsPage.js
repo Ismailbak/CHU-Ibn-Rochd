@@ -10,11 +10,11 @@ import {
   FiChevronLeft, FiCheck, FiX, FiAlertCircle, FiDollarSign, FiClock, FiTarget
 } from 'react-icons/fi';
 
-import { 
-  getMedicalActs, deleteMedicalAct, createMedicalAct, getDoctors, getPatientResults, 
+import { getMedicalActs, deleteMedicalAct, createMedicalAct, getDoctors, getPatientResults,
   getActForms, getFormCsRd, getFormCsRic, getFormCsOs, getFormCsEcho, 
   getFormCsGeste, getFormCsSeances, getFormCsDxa, getFormCsDouleur, getDynamicResponsesForAct 
 } from '../../api/api';
+import { canDeleteClinicalRecords } from '../../utils/permissions';
 import Layout from '../../components/layout/Layout';
 import { Breadcrumb, LoadingSpinner } from '../../components/common';
 import { SkeletonCard } from '../../components/common/Skeleton';
@@ -164,7 +164,7 @@ const getVisiblePages = (currentPage, totalPages) => {
 //   onView   – callback to open the detail modal
 //   onDelete – callback to delete the act
 
-function ActCard({ act, onView, onDelete, onEdit }) {
+function ActCard({ act, onView, onDelete, onEdit, canDelete = true }) {
   return (
     <div className="act-card">
       <div className="act-card-header">
@@ -210,14 +210,16 @@ function ActCard({ act, onView, onDelete, onEdit }) {
           <button className="action-btn edit" title="Modifier" onClick={() => onEdit(act)}>
             <FiEdit2 />
           </button>
-          <button
-            className="action-btn delete"
-            title="Supprimer"
-            onClick={() => onDelete(act.id)}
-            style={{ color: '#ef4444' }}
-          >
-            <FiTrash2 />
-          </button>
+          {canDelete && (
+            <button
+              className="action-btn delete"
+              title="Supprimer"
+              onClick={() => onDelete(act.id)}
+              style={{ color: '#ef4444' }}
+            >
+              <FiTrash2 />
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -840,6 +842,7 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
 
 function MedicalActsPage() {
   const [searchParams] = useSearchParams();
+  const canDeleteMedicalAct = canDeleteClinicalRecords();
   const [stats, setStats] = useState(null);
   const [doctors, setDoctors] = useState([]);
   const [acts, setActs] = useState([]);
@@ -1046,6 +1049,7 @@ function MedicalActsPage() {
                 onView={setSelectedAct}
                 onDelete={openDeleteDialog}
                 onEdit={handleEditAct}
+                canDelete={canDeleteMedicalAct}
               />
             ))
           )}

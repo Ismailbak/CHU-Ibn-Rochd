@@ -42,6 +42,7 @@ data/*
 !data/.gitkeep
 backend/data/uploads/
 backend/.qdrant/
+backend/results/
 
 # Docker
 *.log
