@@ -16,7 +16,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/favicon-logo.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "softwareKeyboardLayoutMode": "resize"
     },
     "plugins": [
       "expo-notifications",

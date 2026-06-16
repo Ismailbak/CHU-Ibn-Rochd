@@ -1,12 +1,13 @@
-﻿import React, { useState, useRef, useCallback } from 'react';
+﻿import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, KeyboardAvoidingView,
-  Platform, TouchableOpacity, ActivityIndicator, TextInput,
+  View, Text, StyleSheet, FlatList,
+  Platform, TouchableOpacity, ActivityIndicator, TextInput, Keyboard,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { sendChatMessage } from '../../api/api';
-import { colors, fonts, spacing, radius } from '../../styles/theme';
-import PhoneShell from '../../components/common/PhoneShell';
+import { colors, fonts, spacing } from '../../styles/theme';
 
 const SUGGESTED_PROMPTS = [
   'Signes de la polyarthrite rhumatoïde ?',
@@ -28,13 +29,47 @@ export default function ChatAssistantScreen({ navigation, route }) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const patientId = route?.params?.patientId || null;
   const flatListRef = useRef(null);
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const panelRadius = width < 380 ? 26 : 34;
+  const horizontalMargin = width < 380 ? 10 : 16;
+
+  const scrollToBottom = useCallback((animated = true) => {
+    requestAnimationFrame(() => {
+      flatListRef.current?.scrollToEnd({ animated });
+    });
+  }, []);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+      scrollToBottom(true);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [scrollToBottom]);
+
+  const bottomSpacer = keyboardHeight > 0
+    ? keyboardHeight + spacing.xs
+    : Math.max(insets.bottom, spacing.sm);
 
   const sendMessage = useCallback(async (text) => {
     const userMsg = text || input.trim();
     if (!userMsg) return;
     setInput('');
+    Keyboard.dismiss();
 
     const newMessages = [
       ...messages,
@@ -75,8 +110,9 @@ export default function ChatAssistantScreen({ navigation, route }) {
       ]);
     } finally {
       setLoading(false);
+      scrollToBottom(true);
     }
-  }, [input, messages, patientId, sessionId]);
+  }, [input, messages, patientId, sessionId, scrollToBottom]);
 
   const renderMessage = ({ item }) => {
     const isUser = item.role === 'user';
@@ -107,36 +143,42 @@ export default function ChatAssistantScreen({ navigation, route }) {
   ];
 
   return (
-    <PhoneShell scroll={false} contentStyle={styles.shellContent}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.75}>
-          <Feather name="chevron-left" size={22} color={colors.mobileMuted} />
-        </TouchableOpacity>
-        <View style={styles.assistantAvatar}><Text style={styles.assistantAvatarText}>AI</Text></View>
-        <View style={styles.headerCopy}>
-          <Text style={styles.headerName}>Assistant RhumatoAI</Text>
-          <Text style={styles.headerRole}>{loading ? 'Réponse en cours...' : 'Réponses médicales contextualisées'}</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.iconButton}
-          activeOpacity={0.8}
-          onPress={() => {
-            setMessages([]);
-            setSessionId(null);
-            setInput('');
-          }}
-        >
-          <Feather name="plus" size={17} color={colors.mobilePrimary} />
-        </TouchableOpacity>
-      </View>
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.chatBody}
-        keyboardVerticalOffset={8}
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <View
+        style={[
+          styles.panel,
+          {
+            marginHorizontal: horizontalMargin,
+            borderRadius: panelRadius,
+            paddingBottom: bottomSpacer,
+          },
+        ]}
       >
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.75}>
+            <Feather name="chevron-left" size={22} color={colors.mobileMuted} />
+          </TouchableOpacity>
+          <View style={styles.assistantAvatar}><Text style={styles.assistantAvatarText}>AI</Text></View>
+          <View style={styles.headerCopy}>
+            <Text style={styles.headerName}>Assistant RhumatoAI</Text>
+            <Text style={styles.headerRole}>{loading ? 'Réponse en cours...' : 'Réponses médicales contextualisées'}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.iconButton}
+            activeOpacity={0.8}
+            onPress={() => {
+              setMessages([]);
+              setSessionId(null);
+              setInput('');
+            }}
+          >
+            <Feather name="plus" size={17} color={colors.mobilePrimary} />
+          </TouchableOpacity>
+        </View>
+
         <FlatList
           ref={flatListRef}
+          style={styles.messageList}
           data={listData}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => {
@@ -165,8 +207,13 @@ export default function ChatAssistantScreen({ navigation, route }) {
               )}
             </>
           }
-          contentContainerStyle={styles.messagesList}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          contentContainerStyle={[
+            styles.messagesList,
+            messages.length === 0 && styles.messagesListEmpty,
+          ]}
+          onContentSizeChange={() => scrollToBottom(false)}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
           showsVerticalScrollIndicator={false}
         />
 
@@ -178,6 +225,7 @@ export default function ChatAssistantScreen({ navigation, route }) {
             value={input}
             onChangeText={setInput}
             onSubmitEditing={() => sendMessage()}
+            onFocus={() => scrollToBottom(true)}
             returnKeyType="send"
             editable={!loading}
           />
@@ -190,16 +238,23 @@ export default function ChatAssistantScreen({ navigation, route }) {
             <Feather name="send" size={18} color={colors.mobileText} />
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
-    </PhoneShell>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  shellContent: {
+  safe: {
+    flex: 1,
+    backgroundColor: colors.mobileBackground,
+    paddingVertical: 6,
+  },
+  panel: {
+    flex: 1,
+    backgroundColor: colors.mobilePanel,
+    overflow: 'hidden',
     paddingHorizontal: spacing.md,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
   },
   header: {
     flexDirection: 'row',
@@ -249,13 +304,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chatBody: {
+  messageList: {
     flex: 1,
   },
   messagesList: {
     flexGrow: 1,
-    justifyContent: 'center',
     paddingVertical: spacing.md,
+  },
+  messagesListEmpty: {
+    justifyContent: 'center',
   },
   timeText: {
     ...fonts.caption,
@@ -300,6 +357,10 @@ const styles = StyleSheet.create({
   assistantBubble: {
     backgroundColor: colors.surface,
   },
+  errorBubble: {
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
   messageText: {
     fontSize: 13,
     color: colors.mobileText,
@@ -308,6 +369,18 @@ const styles = StyleSheet.create({
   },
   userText: {
     color: colors.mobileText,
+  },
+  groundingMeta: {
+    marginTop: spacing.xs,
+    gap: 2,
+  },
+  metaText: {
+    fontSize: 10,
+    color: colors.mobileMuted,
+  },
+  warningText: {
+    fontSize: 10,
+    color: '#B45309',
   },
   suggestionWrap: {
     alignItems: 'center',
@@ -339,14 +412,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingBottom: spacing.xs,
+    paddingTop: spacing.xs,
   },
   composerInput: {
     flex: 1,
-    height: 48,
+    minHeight: 48,
+    maxHeight: 120,
     borderRadius: 24,
     backgroundColor: colors.surface,
     paddingHorizontal: spacing.lg,
+    paddingVertical: 12,
     color: colors.mobileText,
     fontSize: 14,
   },

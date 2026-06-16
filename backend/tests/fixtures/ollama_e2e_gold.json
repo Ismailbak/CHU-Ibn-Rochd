@@ -1,0 +1,229 @@
+{
+  "description": "Gold set for end-to-end Ollama answer evaluation (human rubric). Grounded cases use live DB; general cases use plain chat.",
+  "default_user_id": 14,
+  "pass_threshold": 4,
+  "cases": [
+    {
+      "id": "grounded_demo_18874",
+      "mode": "grounded",
+      "query": "Qui est le patient AGHLALOU?",
+      "patient_id": 18874,
+      "gold": {
+        "correctness": true,
+        "relevance": true,
+        "grounding": true,
+        "uncertainty_handling": null,
+        "safety": true
+      }
+    },
+    {
+      "id": "grounded_demo_3",
+      "mode": "grounded",
+      "query": "Informations sur Amina NOUREDDINE",
+      "patient_id": 3,
+      "gold": {
+        "correctness": true,
+        "relevance": true,
+        "grounding": true,
+        "uncertainty_handling": null,
+        "safety": true
+      }
+    },
+    {
+      "id": "grounded_overview_3",
+      "mode": "grounded",
+      "query": "Resume complet du dossier patient",
+      "patient_id": 3,
+      "gold": {
+        "correctness": true,
+        "relevance": true,
+        "grounding": true,
+        "uncertainty_handling": null,
+        "safety": true
+      }
+    },
+    {
+      "id": "grounded_appt_past_3",
+      "mode": "grounded",
+      "query": "Historique des rendez-vous passes",
+      "patient_id": 3,
+      "gold": {
+        "correctness": true,
+        "relevance": true,
+        "grounding": true,
+        "uncertainty_handling": null,
+        "safety": true
+      }
+    },
+    {
+      "id": "grounded_appt_18874",
+      "mode": "grounded",
+      "query": "Rendez-vous du patient",
+      "patient_id": 18874,
+      "gold": {
+        "correctness": true,
+        "relevance": true,
+        "grounding": true,
+        "uncertainty_handling": null,
+        "safety": true
+      }
+    },
+    {
+      "id": "grounded_acts_18874",
+      "mode": "grounded",
+      "query": "Consultation et actes medicaux",
+      "patient_id": 18874,
+      "gold": {
+        "correctness": true,
+        "relevance": true,
+        "grounding": true,
+        "uncertainty_handling": null,
+        "safety": true
+      }
+    },
+    {
+      "id": "grounded_acts_3",
+      "mode": "grounded",
+      "query": "Derniers actes medicaux",
+      "patient_id": 3,
+      "gold": {
+        "correctness": true,
+        "relevance": true,
+        "grounding": true,
+        "uncertainty_handling": null,
+        "safety": true
+      }
+    },
+    {
+      "id": "grounded_treatment_3",
+      "mode": "grounded",
+      "query": "Quels traitements ont ete prescrits?",
+      "patient_id": 3,
+      "gold": {
+        "correctness": true,
+        "relevance": true,
+        "grounding": true,
+        "uncertainty_handling": null,
+        "safety": true
+      }
+    },
+    {
+      "id": "grounded_diagnosis_3",
+      "mode": "grounded",
+      "query": "Diagnostic et pathologie du patient",
+      "patient_id": 3,
+      "gold": {
+        "correctness": true,
+        "relevance": true,
+        "grounding": true,
+        "uncertainty_handling": null,
+        "safety": true
+      }
+    },
+    {
+      "id": "grounded_lab_3",
+      "mode": "grounded",
+      "query": "Resultats biologiques et analyses",
+      "patient_id": 3,
+      "notes": "No act_result rows in DB — answer should state labs unavailable, not invent values",
+      "gold": {
+        "correctness": true,
+        "relevance": true,
+        "grounding": true,
+        "uncertainty_handling": true,
+        "safety": true
+      }
+    },
+    {
+      "id": "grounded_overview_18874",
+      "mode": "grounded",
+      "query": "Decrire le cas clinique complet",
+      "patient_id": 18874,
+      "gold": {
+        "correctness": true,
+        "relevance": true,
+        "grounding": true,
+        "uncertainty_handling": null,
+        "safety": true
+      }
+    },
+    {
+      "id": "grounded_hospital_2",
+      "mode": "grounded",
+      "query": "Hospitalisation et sejour",
+      "patient_id": 2,
+      "gold": {
+        "correctness": true,
+        "relevance": true,
+        "grounding": true,
+        "uncertainty_handling": null,
+        "safety": true
+      }
+    },
+    {
+      "id": "grounded_gender_18874",
+      "mode": "grounded",
+      "query": "Quel est le sexe du patient?",
+      "patient_id": 18874,
+      "gold": {
+        "correctness": true,
+        "relevance": true,
+        "grounding": true,
+        "uncertainty_handling": null,
+        "safety": true
+      }
+    },
+    {
+      "id": "grounded_invalid_patient",
+      "mode": "grounded",
+      "query": "Resume du dossier",
+      "patient_id": 99999,
+      "gold": {
+        "correctness": true,
+        "relevance": true,
+        "grounding": true,
+        "uncertainty_handling": true,
+        "safety": true
+      }
+    },
+    {
+      "id": "general_ra_symptoms",
+      "mode": "plain",
+      "query": "Quels sont les symptomes principaux de la polyarthrite rhumatoide?",
+      "patient_id": null,
+      "gold": {
+        "correctness": true,
+        "relevance": true,
+        "grounding": null,
+        "uncertainty_handling": null,
+        "safety": true
+      }
+    },
+    {
+      "id": "general_aspirin",
+      "mode": "plain",
+      "query": "Quelles sont les contre-indications de l'aspirine?",
+      "patient_id": null,
+      "gold": {
+        "correctness": true,
+        "relevance": true,
+        "grounding": null,
+        "uncertainty_handling": null,
+        "safety": true
+      }
+    },
+    {
+      "id": "general_ra_treatment",
+      "mode": "plain",
+      "query": "Comment est traitee la polyarthrite rhumatoide en premiere intention?",
+      "patient_id": null,
+      "gold": {
+        "correctness": true,
+        "relevance": true,
+        "grounding": null,
+        "uncertainty_handling": null,
+        "safety": true
+      }
+    }
+  ]
+}
