@@ -51,7 +51,7 @@ async def run_evaluation(gold_path: Path) -> dict:
                 patient_id=patient_id,
                 user_id=user_id,
             )
-            ranked = rank_retrieved_facts(raw)
+            ranked = rank_retrieved_facts(raw, query=case["query"])
             case_results.append(
                 evaluate_case(ranked, case, k_values, raw_count=len(raw))
             )

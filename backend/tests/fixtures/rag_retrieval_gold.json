@@ -33,7 +33,7 @@
       "patient_id": 3,
       "relevant_source_types": ["appointment"],
       "required_source_types": ["appointment"],
-      "notes": "Appointments rank after patient demographics under current fact_ranking priorities"
+      "notes": "Clinical-focused ranking: appointments should appear in top-5 after query-aware demotion of static demographics"
     },
     {
       "id": "appt_18874",

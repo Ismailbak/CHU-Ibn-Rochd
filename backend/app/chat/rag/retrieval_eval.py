@@ -216,5 +216,8 @@ def load_gold_set(path: Path) -> Dict[str, Any]:
         return json.load(f)
 
 
-def rank_retrieved_facts(facts: List[RetrievedFact]) -> List[RetrievedFact]:
-    return rank_and_cap_facts(facts)
+def rank_retrieved_facts(
+    facts: List[RetrievedFact],
+    query: Optional[str] = None,
+) -> List[RetrievedFact]:
+    return rank_and_cap_facts(facts, query=query)

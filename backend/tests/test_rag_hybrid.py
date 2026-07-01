@@ -68,6 +68,30 @@ class TestFactRanking:
             ranked = rank_and_cap_facts(facts)
         assert len(ranked) == 2
 
+    def test_appointment_query_boosts_appointments_over_demographics(self):
+        facts = [
+            RetrievedFact(
+                source_type="patient", source_id=1,
+                fact_text="Patient: X", snippet="X (IPP: 1)",
+                metadata={"patient_field": "identity"},
+            ),
+            RetrievedFact(
+                source_type="patient", source_id=1,
+                fact_text="DOB", snippet="DOB 1990, 35 ans",
+                metadata={"patient_field": "dob"},
+            ),
+            RetrievedFact(
+                source_type="appointment", source_id=10,
+                fact_text="2026-05-13", snippet="2026-05-13 — suivi",
+                timestamp=datetime(2026, 5, 13),
+            ),
+        ]
+        ranked = rank_and_cap_facts(
+            facts,
+            query="Historique des rendez-vous passes",
+        )
+        assert ranked[0].source_type == "appointment"
+
 
 class TestResponseCleaning:
     def test_removes_malformed_manual_source_list(self):

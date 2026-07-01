@@ -2,6 +2,7 @@
 Structured Retrievers for RAG — patients, appointments, medical acts, act results.
 """
 
+import re
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
@@ -39,9 +40,8 @@ def _query_hints(query: str) -> dict:
         k in q
         for k in (
             "resume", "résume", "resumer", "résumer", "synthese", "synthèse",
-            "cas", "dossier", "situation", "bilan", "overview", "summarize",
-            "describe", "decrire", "décrire", "presenter", "présenter",
-            "qui est", "tell me about", "parle-moi", "parle moi",
+            "cas clinique", "dossier", "situation", "bilan", "overview", "summarize",
+            "decrire le cas", "décrire le cas", "presenter le cas", "présenter le cas",
             "vue d'ensemble", "historique complet",
         )
     )
@@ -54,93 +54,168 @@ def _query_hints(query: str) -> dict:
         "treatment": any(k in q for k in ("traitement", "medicament", "médicament", "prescri", "therap")),
         "diagnosis": any(k in q for k in ("diagnostic", "diagnos", "maladie", "patholog")),
         "act": any(k in q for k in ("acte", "consultation", "hospital", "rapport")),
+        "gender": any(k in q for k in ("sexe", "gender", "genre")),
+        "identity": any(k in q for k in ("qui est", "informations sur", "identite", "identité")),
         "case_overview": case_overview,
     }
+
+
+def _patient_detail_mode(query: str) -> str:
+    """
+    How many demographic facts to emit from PatientRetriever.
+
+    none      — skip patient facts (patient already scoped; clinical-only query)
+    gender    — compact composite with gender
+    full      — rich composite (case summaries, identity lookups)
+    compact   — identity + primary diagnosis (diagnosis queries)
+    """
+    hints = _query_hints(query)
+    if hints.get("case_overview") or hints.get("identity"):
+        return "full"
+    if hints.get("gender"):
+        return "gender"
+    if hints.get("diagnosis"):
+        return "compact"
+    if any(hints.get(k) for k in ("appointment", "lab", "treatment", "act")):
+        return "none"
+    return "full"
+
+
+def _retrieval_targets(hints: dict) -> dict:
+    """Which structured sources to query (focused routing improves precision)."""
+    if hints.get("case_overview"):
+        return {"patient": True, "appointment": True, "medical_act": True, "act_result": True}
+    if hints.get("identity"):
+        return {"patient": True, "appointment": False, "medical_act": False, "act_result": False}
+    if hints.get("gender"):
+        return {"patient": True, "appointment": False, "medical_act": False, "act_result": False}
+    if hints.get("appointment"):
+        return {"patient": False, "appointment": True, "medical_act": False, "act_result": False}
+    if hints.get("lab"):
+        return {"patient": False, "appointment": False, "medical_act": False, "act_result": True}
+    if hints.get("treatment"):
+        return {"patient": False, "appointment": False, "medical_act": True, "act_result": False}
+    if hints.get("diagnosis"):
+        return {"patient": True, "appointment": False, "medical_act": True, "act_result": False}
+    if hints.get("act"):
+        return {"patient": False, "appointment": False, "medical_act": True, "act_result": False}
+    return {"patient": True, "appointment": True, "medical_act": True, "act_result": True}
+
+
+def _stamp_patient_on_clinical_facts(
+    facts: List[RetrievedFact],
+    patient_id: Optional[int],
+    db_session,
+) -> List[RetrievedFact]:
+    """Prefix patient name on clinical facts (context for LLM + keyword-aware precision)."""
+    if not patient_id or not facts:
+        return facts
+
+    from app.models.patient import Patient
+
+    patient = db_session.query(Patient).filter(Patient.id == patient_id).first()
+    if not patient:
+        return facts
+
+    label = f"{patient.first_name} {patient.last_name}".strip()
+    if patient.ipp:
+        label = f"{label} ({patient.ipp})"
+
+    stamped: List[RetrievedFact] = []
+    for fact in facts:
+        if fact.source_type == "patient" or label.lower() in (fact.snippet or "").lower():
+            stamped.append(fact)
+            continue
+        copy = fact.model_copy(deep=True)
+        copy.snippet = f"{label} | {fact.snippet}"
+        copy.fact_text = f"{label} | {fact.fact_text}"
+        stamped.append(copy)
+    return stamped
 
 
 class PatientRetriever(StructuredRetriever):
     def __init__(self, db_session):
         self.db = db_session
 
+    def _composite_patient_fact(
+        self,
+        patient,
+        detail_mode: str,
+        allergies: Optional[List] = None,
+    ) -> List[RetrievedFact]:
+        """One rich patient fact (better precision + LLM context than fragmented rows)."""
+        display = f"{patient.civility or ''} {patient.first_name} {patient.last_name}".strip()
+        ipp = f" (IPP: {patient.ipp})" if patient.ipp else ""
+        parts = [f"Patient: {display}{ipp}"]
+
+        if detail_mode in ("full", "compact", "gender") and patient.date_of_birth:
+            age = (date.today() - patient.date_of_birth).days // 365
+            parts.append(f"Né(e) le {patient.date_of_birth}, {age} ans")
+
+        if detail_mode in ("full", "compact", "gender") and patient.gender:
+            parts.append(f"Sexe: {patient.gender}")
+
+        if detail_mode == "full" and patient.blood_type:
+            parts.append(f"Groupe sanguin: {patient.blood_type}")
+
+        if detail_mode in ("full", "compact") and patient.primary_diagnosis:
+            parts.append(f"Diagnostic principal: {_truncate(patient.primary_diagnosis)}")
+
+        if detail_mode == "full" and patient.notes:
+            parts.append(f"Notes: {_truncate(patient.notes, 200)}")
+
+        snippet = " | ".join(parts)
+        facts = [
+            RetrievedFact(
+                source_type="patient",
+                source_id=patient.id,
+                fact_text=snippet,
+                snippet=snippet,
+                confidence=1.0,
+                metadata={"patient_field": "composite"},
+            )
+        ]
+
+        if detail_mode == "full" and allergies:
+            allergen_text = ", ".join(a.allergen for a in allergies if a.allergen)
+            if allergen_text:
+                facts.append(
+                    RetrievedFact(
+                        source_type="patient_note",
+                        source_id=patient.id,
+                        fact_text=f"Allergies: {allergen_text}",
+                        snippet=f"Allergies: {allergen_text}",
+                        confidence=1.0,
+                        metadata={"patient_field": "allergy"},
+                    )
+                )
+        return facts
+
     async def retrieve(self, query: str, patient_id: Optional[int] = None, top_k: int = 5) -> List[RetrievedFact]:
-        facts = []
         if not patient_id:
-            return facts
+            return []
 
         from app.models.patient import Patient
         from app.models.patient_allergy import PatientAllergy
 
         patient = self.db.query(Patient).filter(Patient.id == patient_id).first()
         if not patient:
-            return facts
+            return []
 
-        display = f"{patient.civility or ''} {patient.first_name} {patient.last_name}".strip()
-        ipp = f" (IPP: {patient.ipp})" if patient.ipp else ""
-        facts.append(RetrievedFact(
-            source_type="patient",
-            source_id=patient.id,
-            fact_text=f"Patient: {display}{ipp}",
-            snippet=f"{display}{ipp}",
-            confidence=1.0,
-        ))
+        detail_mode = _patient_detail_mode(query)
+        if detail_mode == "none":
+            return []
 
-        if patient.date_of_birth:
-            age = (date.today() - patient.date_of_birth).days // 365
-            facts.append(RetrievedFact(
-                source_type="patient",
-                source_id=patient.id,
-                fact_text=f"Date of birth: {patient.date_of_birth}, Age: {age}",
-                snippet=f"DOB {patient.date_of_birth}, {age} ans",
-                confidence=1.0,
-            ))
+        allergies = []
+        if detail_mode == "full":
+            allergies = (
+                self.db.query(PatientAllergy)
+                .filter(PatientAllergy.patient_id == patient_id)
+                .limit(top_k)
+                .all()
+            )
 
-        if patient.gender:
-            facts.append(RetrievedFact(
-                source_type="patient",
-                source_id=patient.id,
-                fact_text=f"Gender: {patient.gender}",
-                snippet=f"Sexe: {patient.gender}",
-                confidence=1.0,
-            ))
-
-        if patient.blood_type:
-            facts.append(RetrievedFact(
-                source_type="patient",
-                source_id=patient.id,
-                fact_text=f"Blood type: {patient.blood_type}",
-                snippet=f"Groupe sanguin: {patient.blood_type}",
-                confidence=1.0,
-            ))
-
-        if patient.primary_diagnosis:
-            facts.append(RetrievedFact(
-                source_type="patient",
-                source_id=patient.id,
-                fact_text=f"Primary diagnosis: {patient.primary_diagnosis}",
-                snippet=_truncate(patient.primary_diagnosis),
-                confidence=1.0,
-            ))
-
-        if patient.notes:
-            facts.append(RetrievedFact(
-                source_type="patient_note",
-                source_id=patient.id,
-                fact_text=f"Clinical notes: {_truncate(patient.notes, 400)}",
-                snippet=_truncate(patient.notes),
-                confidence=1.0,
-            ))
-
-        allergies = self.db.query(PatientAllergy).filter(PatientAllergy.patient_id == patient_id).limit(top_k).all()
-        for allergy in allergies:
-            facts.append(RetrievedFact(
-                source_type="patient_note",
-                source_id=patient.id,
-                fact_text=f"Allergy: {allergy.allergen} (severity: {allergy.severity or 'unknown'})",
-                snippet=f"{allergy.allergen}",
-                confidence=1.0,
-            ))
-
-        return facts[: top_k * 2]
+        return self._composite_patient_fact(patient, detail_mode, allergies)
 
 
 class AppointmentRetriever(StructuredRetriever):
@@ -193,9 +268,27 @@ class MedicalActRetriever(StructuredRetriever):
             self.db.query(MedicalAct)
             .filter(MedicalAct.patient_id == patient_id)
             .order_by(MedicalAct.act_date.desc())
-            .limit(top_k)
+            .limit(top_k * 3)
             .all()
         )
+
+        q_lower = query.lower()
+
+        def act_relevance(act) -> int:
+            text = " ".join(
+                str(x or "") for x in (act.act_type, act.category, act.description, act.report)
+            ).lower()
+            score = 0
+            for token in re.findall(r"[^\W\d_]+", q_lower, flags=re.UNICODE):
+                if len(token) > 4 and token in text:
+                    score += 1
+            return score
+
+        acts.sort(key=lambda a: (act_relevance(a), a.act_date or datetime.min), reverse=True)
+        matching = [a for a in acts if act_relevance(a) > 0]
+        if matching:
+            acts = matching
+        acts = acts[:top_k]
 
         facts = []
         for act in acts:
@@ -310,25 +403,22 @@ class StructuredRetrievalPipeline:
 
         facts: List[RetrievedFact] = []
         hints = _query_hints(query)
+        targets = _retrieval_targets(hints)
         top_k = top_k_per_source
         if hints.get("case_overview"):
             top_k = max(top_k_per_source, 8)
 
-        facts.extend(await self.patient_retriever.retrieve(query, patient_id, top_k))
+        if targets["patient"]:
+            facts.extend(await self.patient_retriever.retrieve(query, patient_id, top_k))
 
-        if hints.get("case_overview") or hints.get("appointment") or not hints.get("lab"):
+        if targets["appointment"]:
             facts.extend(await self.appointment_retriever.retrieve(query, patient_id, top_k))
 
-        if (
-            hints.get("case_overview")
-            or hints.get("act")
-            or hints.get("treatment")
-            or hints.get("diagnosis")
-            or not hints.get("lab")
-        ):
+        if targets["medical_act"]:
             facts.extend(await self.medical_act_retriever.retrieve(query, patient_id, top_k))
 
-        if hints.get("case_overview") or hints.get("lab") or hints.get("abnormal") or True:
+        if targets["act_result"]:
             facts.extend(await self.act_result_retriever.retrieve(query, patient_id, top_k))
 
+        facts = _stamp_patient_on_clinical_facts(facts, patient_id, self.db)
         return facts

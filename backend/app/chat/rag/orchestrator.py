@@ -130,7 +130,7 @@ class RAGOrchestrator:
             else:
                 retrieval_type = "structured" if patient_id else "none"
 
-            facts = rank_and_cap_facts(facts)
+            facts = rank_and_cap_facts(facts, query=request.query)
 
             if not facts and patient_id:
                 label = patient_display_name or f"patient #{patient_id}"
