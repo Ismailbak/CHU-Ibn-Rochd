@@ -51,7 +51,145 @@ Download on a PC with internet, then upload to Proxmox **local → ISO Images**:
 
 - `ubuntu-26.04-live-server-amd64.iso`
 
-Use the same ISO for all three VMs.
+Use the same ISO for all three VMs. In the office test VLAN we use **Ubuntu 24.04.4** (`ubuntu-24.04.4-live-server-amd64.iso`).
+
+---
+
+## Proxmox: create a VM (repeat for 4010, 4020, 4030)
+
+Use this checklist for **each** new VM. Only the **General**, **CPU/RAM/Disk**, and **installer IP/hostname** rows change.
+
+### VM-specific values
+
+| VM ID | Name | Static IP | Hostname | vCPU | RAM (MiB) | Disk (GiB) |
+|-------|------|-----------|----------|------|-----------|------------|
+| 4010 | `rhumato-db` | `192.168.11.10/24` | `rhumato-db` | 2 | 4096 | 40 |
+| 4020 | `rhumato-app` | `192.168.11.20/24` | `rhumato-app` | 4 | 8192 | 40 |
+| 4030 | `rhumato-ai` | `192.168.11.30/24` | `rhumato-ai` | 4 | 8192 | 60 |
+
+Office LAN (test): gateway **`192.168.11.1`**, DNS **`8.8.8.8, 1.1.1.1`**, bridge **`vmbr0`**, Proxmox host **`10.13.19.111`** (also **`192.168.11.111`** on `vmbr0`).
+
+Linux user on all VMs: **`ismailbak`** (sudo). Use the same username in systemd `User=` on the app VM.
+
+### Tab 1 — General
+
+| Field | Value |
+|-------|--------|
+| Node | `wdf` |
+| VM ID | from table above |
+| Name | from table above |
+| Resource Pool | empty |
+| Add to HA / Start at boot | unchecked |
+
+→ **Next**
+
+### Tab 2 — OS
+
+| Field | Value |
+|-------|--------|
+| Use CD/DVD disc image (iso) | selected |
+| Storage | `local` |
+| ISO image | `ubuntu-24.04.4-live-server-amd64.iso` |
+| Type | Linux |
+| Version | 6.x - 2.6 Kernel |
+
+→ **Next**
+
+### Tab 3 — System
+
+| Field | Value |
+|-------|--------|
+| Machine | q35 |
+| BIOS | Default (SeaBIOS) |
+| SCSI Controller | VirtIO SCSI single |
+| Qemu Agent / TPM | unchecked |
+
+(Firmware field stays empty with SeaBIOS — normal.)
+
+→ **Next**
+
+### Tab 4 — Disks
+
+| Field | Value |
+|-------|--------|
+| Storage | `local-lvm` |
+| Disk size | from table above |
+| Format | raw |
+
+→ **Next**
+
+### Tab 5 — CPU
+
+| Field | Value |
+|-------|--------|
+| Sockets | 1 |
+| Cores | from table above |
+| Type | `host` if available |
+
+→ **Next**
+
+### Tab 6 — Memory
+
+| Field | Value |
+|-------|--------|
+| Memory (MiB) | from table above |
+
+→ **Next**
+
+### Tab 7 — Network
+
+| Field | Value |
+|-------|--------|
+| Bridge | `vmbr0` |
+| Model | VirtIO (paravirtualized) |
+| Firewall | **unchecked** |
+
+→ **Next** → **Confirm** → **Finish** (do not start after created) → **Start** → **Console**
+
+### Ubuntu installer (every VM)
+
+| Screen | Choice |
+|--------|--------|
+| Install vs Try | **Install Ubuntu Server** |
+| Installer update | **Continue without updating** (or update if mirror works) |
+| Type | **Ubuntu Server** (not minimized) |
+| Third-party drivers | unchecked |
+| Network → `enp6s18` → Manual | Subnet `192.168.11.0/24`, Address from table, Gateway `192.168.11.1`, DNS `8.8.8.8, 1.1.1.1` |
+| Proxy | empty → Done |
+| Mirror | Continue if test fails; **Done** if mirror passes |
+| Storage | Use entire disk, LVM on, **no** LUKS encryption → Done → confirm wipe |
+| Profile | Your name: any; Server name: hostname from table; Username: `ismailbak`; password; **OpenSSH** enabled |
+| Featured snaps | none |
+| Install | wait for logs to finish → **Reboot** |
+
+After reboot: Proxmox → VM → **Hardware** → CD/DVD → **Do not use any media**.
+
+Verify:
+
+```bash
+hostname
+ip a
+ping -c 2 google.com
+```
+
+Snapshot: **`clean-ubuntu-installed`**.
+
+### Copy files PC → VM (when PC cannot reach VM IP)
+
+1. `scp` file to Proxmox host: `scp FILE root@10.13.19.111:/tmp/`
+2. On Proxmox shell: `cd /tmp && python3 -m http.server 8888 --bind 0.0.0.0`
+3. On VM console: `wget http://192.168.11.111:8888/FILE -O /tmp/FILE` (use **`-O`** capital O, not zero)
+4. Ctrl+C on Proxmox shell when done
+
+### MySQL dump encoding (Windows)
+
+Use mysqldump **`-r`** flag — do not use PowerShell `>` (creates UTF-16):
+
+```powershell
+mysqldump -u root -p --single-transaction rhumatoai -r D:\rhumatoai-backup.sql
+```
+
+If the VM already has a UTF-16 file: `iconv -f UTF-16LE -t UTF-8 ... > /tmp/rhumatoai-utf8.sql`
 
 ---
 
