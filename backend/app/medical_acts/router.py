@@ -159,6 +159,42 @@ class MedicalActOut(MedicalActBase):
 
 # ─── Internal Helper ──────────────────────────────────────────────────────────
 
+def _parse_treatment_item(item) -> Optional[dict]:
+    """Normalize a treatment payload item (Pydantic v2 may deliver dicts, not TreatmentInput)."""
+    if isinstance(item, str):
+        name = item.strip()
+        return {"drug_name": name} if name else None
+    if isinstance(item, TreatmentInput):
+        return item.model_dump()
+    if isinstance(item, dict):
+        return item
+    return None
+
+
+def _persist_treatments(db: Session, act_id: int, treatment_text) -> None:
+    """Save one or more treatments on an act from API payload (str, dict, or list)."""
+    if not treatment_text:
+        return
+    items = treatment_text if isinstance(treatment_text, list) else [treatment_text]
+    for raw in items:
+        data = _parse_treatment_item(raw)
+        if not data:
+            continue
+        drug_name = (data.get("drug_name") or "").strip()
+        if not drug_name:
+            continue
+        db.add(
+            ActTreatmentModel(
+                act_id=act_id,
+                drug_name=drug_name,
+                dosage=data.get("dosage"),
+                frequency=data.get("frequency"),
+                duration=data.get("duration"),
+                notes=data.get("notes"),
+            )
+        )
+
+
 def _act_to_dict(act: MedicalActModel, patient_name: Optional[str], documents: List[ActDocumentModel] = None, assigned_staff: List[MedicalActStaffModel] = None, diagnoses=None, treatments=None, forms=None) -> dict:
     """
     Converts a MedicalActModel ORM row to a plain dict, injecting patient_name, diagnoses, treatments.
@@ -391,31 +427,7 @@ def create_medical_act(
     
     # Create ActTreatment if treatment is provided
     if treatment_text:
-        if isinstance(treatment_text, list):
-            for t in treatment_text:
-                if isinstance(t, TreatmentInput):
-                    if t.drug_name and t.drug_name.strip():
-                        db_treatment = ActTreatmentModel(
-                            act_id=db_act.id,
-                            drug_name=t.drug_name.strip(),
-                            dosage=t.dosage,
-                            frequency=t.frequency,
-                            duration=t.duration,
-                            notes=t.notes
-                        )
-                        db.add(db_treatment)
-                elif isinstance(t, str) and t.strip():
-                    db_treatment = ActTreatmentModel(
-                        act_id=db_act.id,
-                        drug_name=t.strip()
-                    )
-                    db.add(db_treatment)
-        elif isinstance(treatment_text, str) and treatment_text.strip():
-            db_treatment = ActTreatmentModel(
-                act_id=db_act.id,
-                drug_name=treatment_text.strip()
-            )
-            db.add(db_treatment)
+        _persist_treatments(db, db_act.id, treatment_text)
     
     db.commit()
     
@@ -511,31 +523,7 @@ def update_medical_act(
     # Handle treatment: Delete old treatment for this act and create new one if provided
     if treatment_text is not None:  # Only update if treatment was provided in request
         db.query(ActTreatmentModel).filter(ActTreatmentModel.act_id == act_id).delete()
-        if isinstance(treatment_text, list):
-            for t in treatment_text:
-                if isinstance(t, TreatmentInput):
-                    if t.drug_name and t.drug_name.strip():
-                        db_treatment = ActTreatmentModel(
-                            act_id=act_id,
-                            drug_name=t.drug_name.strip(),
-                            dosage=t.dosage,
-                            frequency=t.frequency,
-                            duration=t.duration,
-                            notes=t.notes
-                        )
-                        db.add(db_treatment)
-                elif isinstance(t, str) and t.strip():
-                    db_treatment = ActTreatmentModel(
-                        act_id=act_id,
-                        drug_name=t.strip()
-                    )
-                    db.add(db_treatment)
-        elif isinstance(treatment_text, str) and treatment_text.strip():
-            db_treatment = ActTreatmentModel(
-                act_id=act_id,
-                drug_name=treatment_text.strip()
-            )
-            db.add(db_treatment)
+        _persist_treatments(db, act_id, treatment_text)
     
     db.commit()
     db.refresh(row)

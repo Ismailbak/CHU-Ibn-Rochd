@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FiX, FiCheck, FiAlertCircle } from 'react-icons/fi';
-import { createMedicalAct } from '../../api/api';
+import { createMedicalAct, formatApiError } from '../../api/api';
 import TreatmentPrescriptionPanel from '../../components/Treatments/TreatmentPrescriptionPanel';
 import './PatientTreatmentForm.css';
 
@@ -20,7 +20,7 @@ function PatientTreatmentForm({ patientId, onSuccess, onClose }) {
     setError('');
     try {
       await createMedicalAct({
-        patient_id: patientId,
+        patient_id: Number(patientId),
         act_type: 'Consultation',
         act_date: new Date().toISOString().split('T')[0],
         status: 'completed',
@@ -30,7 +30,7 @@ function PatientTreatmentForm({ patientId, onSuccess, onClose }) {
       onSuccess();
     } catch (err) {
       console.error('Erreur lors de l\'enregistrement du traitement:', err);
-      setError('Impossible d\'enregistrer le traitement. Réessayez.');
+      setError(formatApiError(err, 'Impossible d\'enregistrer le traitement. Réessayez.'));
     } finally {
       setLoading(false);
     }
