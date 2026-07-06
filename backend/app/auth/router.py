@@ -12,7 +12,7 @@ import os
 import shutil
 from pathlib import Path
 from app.models.user import User
-from app.auth.permissions import is_nurse, ROLE_NURSE
+from app.auth.roles import is_nurse, ROLE_NURSE
 from app.auth.deletion import delete_user_cascade
 from app.models.audit import AuditLog
 from app.auth.service import (

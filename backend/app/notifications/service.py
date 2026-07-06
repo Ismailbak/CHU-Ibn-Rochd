@@ -3,7 +3,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from app.models.notification import Notification as NotificationModel
 from app.models.user import User as UserModel
-from app.auth.permissions import ROLE_NURSE
+from app.auth.roles import ROLE_NURSE
 
 STAFF_ROLES = ("doctor", "infirmier", "admin", "department_head")
 

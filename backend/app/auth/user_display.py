@@ -1,8 +1,7 @@
 """Display names and titles for users across the app."""
 
 from app.models.user import User
-
-ROLE_NURSE = "infirmier"
+from app.auth.roles import ROLE_NURSE
 
 
 def get_assistant_address_name(user: User) -> str:
