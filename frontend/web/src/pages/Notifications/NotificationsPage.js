@@ -250,7 +250,11 @@ function NotificationsPage() {
         <CreateNotificationModal 
           isOpen={showCreateModal} 
           onClose={() => setShowCreateModal(false)} 
-          onCreated={fetchNotifications}
+          onCreated={() => {
+            fetchNotifications();
+            toast.success('Notification envoyée avec succès');
+          }}
+          onError={(msg) => toast.error(msg)}
         />
       </div>
     </Layout>

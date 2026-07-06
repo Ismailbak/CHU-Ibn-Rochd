@@ -29,6 +29,19 @@ const api = axios.create({
   baseURL: API_URL,
 });
 
+/** Turn FastAPI/axios error payloads into a user-visible string. */
+export const formatApiError = (err, fallback = 'Une erreur est survenue.') => {
+  const detail = err?.response?.data?.detail;
+  if (typeof detail === 'string' && detail.trim()) return detail;
+  if (Array.isArray(detail)) {
+    return detail.map((item) => item?.msg || item?.message || String(item)).join(', ');
+  }
+  if (detail && typeof detail === 'object') {
+    return detail.message || detail.msg || fallback;
+  }
+  return fallback;
+};
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {

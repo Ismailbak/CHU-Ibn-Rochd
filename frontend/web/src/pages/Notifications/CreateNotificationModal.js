@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FiX, FiSend, FiUser, FiUsers, FiInfo } from 'react-icons/fi';
-import { getDoctors, createNotification } from '../../api/api';
+import { getDoctors, createNotification, formatApiError } from '../../api/api';
 import './CreateNotificationModal.css';
 
-const CreateNotificationModal = ({ isOpen, onClose, onCreated }) => {
+const CreateNotificationModal = ({ isOpen, onClose, onCreated, onError }) => {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [recipientType, setRecipientType] = useState('all');
@@ -41,22 +41,32 @@ const CreateNotificationModal = ({ isOpen, onClose, onCreated }) => {
     setError('');
 
     try {
-      await createNotification({
-        title,
-        message,
+      const res = await createNotification({
+        title: title.trim(),
+        message: message.trim(),
         is_public: recipientType === 'all',
         recipient_id: recipientType === 'specific' ? parseInt(recipientId, 10) : null,
         category,
       });
 
-      onCreated();
+      if (!res.data?.length) {
+        const msg = 'Aucune notification n\'a pu être créée.';
+        setError(msg);
+        onError?.(msg);
+        return;
+      }
+
+      onCreated(res.data);
       onClose();
       setTitle('');
       setMessage('');
       setRecipientId('');
+      setRecipientType('all');
       setCategory('message');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Une erreur est survenue lors de l\'envoi.');
+      const msg = formatApiError(err, 'Une erreur est survenue lors de l\'envoi.');
+      setError(msg);
+      onError?.(msg);
     } finally {
       setIsSubmitting(false);
     }

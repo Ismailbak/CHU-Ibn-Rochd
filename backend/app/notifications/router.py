@@ -12,6 +12,26 @@ from app.notifications import service as notification_service
 router = APIRouter()
 
 
+def _serialize_notification(db: Session, row) -> dict:
+    sender_name = "Système"
+    if row.sender_id:
+        sender = db.query(User).filter(User.id == row.sender_id).first()
+        if sender:
+            sender_name = f"Dr. {sender.last_name}" if sender.last_name else sender.username
+
+    return {
+        "id": row.id,
+        "title": row.title,
+        "message": row.message,
+        "read": row.read,
+        "is_public": row.is_public,
+        "sender_id": row.sender_id,
+        "sender_name": sender_name,
+        "category": row.category,
+        "created_at": row.created_at,
+    }
+
+
 class Notification(BaseModel):
     id: int
     title: str
@@ -41,26 +61,7 @@ def get_notifications(
     current_user: User = Depends(get_current_user_orm),
 ):
     rows = notification_service.get_user_notifications(db, current_user.id)
-    result = []
-    for r in rows:
-        sender_name = "Système"
-        if r.sender_id:
-            sender = db.query(User).filter(User.id == r.sender_id).first()
-            if sender:
-                sender_name = f"Dr. {sender.last_name}" if sender.last_name else sender.username
-        
-        result.append({
-            "id": r.id,
-            "title": r.title,
-            "message": r.message,
-            "read": r.read,
-            "is_public": r.is_public,
-            "sender_id": r.sender_id,
-            "sender_name": sender_name,
-            "category": r.category,
-            "created_at": r.created_at
-        })
-    return result
+    return [_serialize_notification(db, r) for r in rows]
 
 
 @router.post("/", response_model=List[Notification])
@@ -73,16 +74,20 @@ def send_notification(
     if current_user.role not in ["doctor", "admin", "department_head"]:
         raise HTTPException(status_code=403, detail="Only medical staff can send notifications")
     
-    new_notifs = notification_service.send_manual_notification(
-        db, 
-        sender_id=current_user.id, 
-        recipient_id=data.recipient_id, 
-        title=data.title, 
-        message=data.message, 
-        is_public=data.is_public,
-        category=data.category
-    )
-    return [Notification.from_orm(n) for n in new_notifs]
+    try:
+        new_notifs = notification_service.send_manual_notification(
+            db,
+            sender_id=current_user.id,
+            recipient_id=data.recipient_id,
+            title=data.title.strip(),
+            message=data.message.strip(),
+            is_public=data.is_public,
+            category=data.category,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return [_serialize_notification(db, n) for n in new_notifs]
 
 
 @router.post("/read/{notification_id}")
