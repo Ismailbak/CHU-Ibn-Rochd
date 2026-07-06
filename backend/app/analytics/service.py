@@ -79,7 +79,7 @@ def get_summary_stats(db: Session, date_range: str = "6months") -> Dict:
                 ages.append(age)
         avg_age = sum(ages) / len(ages) if ages else 0.0
     
-    common_diagnoses = get_top_act_diagnoses(db, start_date=start_date, limit=None)
+    common_diagnoses = get_top_act_diagnoses(db, start_date=None, limit=5)
 
     # Weekly Activity (current week, filtered by date range)
     week_start = today - timedelta(days=today.weekday())

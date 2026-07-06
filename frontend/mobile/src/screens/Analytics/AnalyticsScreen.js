@@ -118,23 +118,6 @@ export default function AnalyticsScreen({ navigation }) {
           </SectionCard>
         ) : null}
 
-        {data?.revenue_trends && data.revenue_trends.length > 0 ? (
-          <SectionCard title="Revenus mensuels" icon="credit-card">
-            <View style={styles.revTable}>
-              {data.revenue_trends.filter((r) => r.revenue > 0).length > 0 ? (
-                data.revenue_trends.filter((r) => r.revenue > 0).map((r, i) => (
-                  <View key={String(i)} style={styles.revRow}>
-                    <Text style={styles.revMonth}>{String(r.month)}</Text>
-                    <Text style={styles.revAmount}>{String(r.revenue.toLocaleString()) + ' MAD'}</Text>
-                    <Text style={styles.revPatients}>{String(r.patients) + ' pts'}</Text>
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.emptyText}>{'Aucune donnée de revenu'}</Text>
-              )}
-            </View>
-          </SectionCard>
-        ) : null}
       </ScrollView>
     </PhoneShell>
   );

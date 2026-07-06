@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-  RadialBarChart, RadialBar, ComposedChart
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  ComposedChart
 } from 'recharts';
 import { 
-  FiTrendingUp, FiDownload, FiCalendar, FiUsers, FiDollarSign, 
-  FiActivity, FiPieChart, FiBarChart2, FiFileText, FiFilter 
+  FiTrendingUp, FiDownload, FiCalendar, FiUsers, 
+  FiActivity, FiPieChart, FiBarChart2, FiFileText
 } from 'react-icons/fi';
 import jsPDF from 'jspdf';
 import Layout from '../../components/layout/Layout';
@@ -60,8 +60,6 @@ function AnalyticsPage() {
     if (summary) {
       // eslint-disable-next-line no-console
       console.debug('Analytics summary loaded:', summary);
-      // eslint-disable-next-line no-console
-      console.debug('monthlyRevenueData:', summary.revenue_trends);
     }
   }, [summary]);
 
@@ -74,7 +72,6 @@ function AnalyticsPage() {
   const weeklyAppointmentsData = summary?.weekly_activity ?? [];
   const ageDistributionData = summary?.demographics ?? [];
   const activityTrendData = summary?.activity_trends ?? [];
-  const monthlyRevenueData = summary?.revenue_trends ?? [];
   const topTreatmentsData = summary?.treatments ?? [];
 
   const handleExportPDF = () => {
@@ -200,8 +197,8 @@ function AnalyticsPage() {
       yPosition = addTable(['Rang', 'Traitement', 'Nombre'], treatmentData, yPosition, [16, 185, 129]);
     }
 
-    // ===== PAGE 2: ACTIVITY & REVENUE =====
-    if (activityTrendData.length > 0 || monthlyRevenueData.length > 0) {
+    // ===== PAGE 2: ACTIVITY =====
+    if (activityTrendData.length > 0) {
       doc.addPage();
       yPosition = 15;
 
@@ -211,29 +208,11 @@ function AnalyticsPage() {
       doc.text('3. TENDANCE D\'ACTIVITÉ (Derniers 12 mois)', margin, yPosition);
       yPosition += 8;
 
-      if (activityTrendData.length > 0) {
-        const activityData = activityTrendData.slice(0, 12).map(item => [
-          item.period || 'N/A',
-          String(item.count || 0)
-        ]);
-        yPosition = addTable(['Période', 'Activité'], activityData, yPosition, [139, 92, 246]);
-      }
-
-      // Revenue Section
-      yPosition += 3;
-      doc.setFontSize(13);
-      doc.setFont(undefined, 'bold');
-      doc.setTextColor(59, 130, 246);
-      doc.text('4. ÉVOLUTION DES REVENUS', margin, yPosition);
-      yPosition += 8;
-
-      if (monthlyRevenueData.length > 0) {
-        const revenueData = monthlyRevenueData.slice(0, 12).map(item => [
-          item.period || 'N/A',
-          (item.revenue || 0).toLocaleString('fr-FR')
-        ]);
-        yPosition = addTable(['Période', 'Revenus (DH)'], revenueData, yPosition, [59, 130, 246]);
-      }
+      const activityData = activityTrendData.slice(0, 12).map(item => [
+        item.period || 'N/A',
+        String(item.count || 0)
+      ]);
+      yPosition = addTable(['Période', 'Activité'], activityData, yPosition, [139, 92, 246]);
     }
 
     // ===== PAGE 3: DEMOGRAPHICS =====
@@ -335,12 +314,6 @@ function AnalyticsPage() {
             <FiPieChart /> Vue d'ensemble
           </button>
           <button 
-            className={`tab-btn ${activeTab === 'revenue' ? 'active' : ''}`}
-            onClick={() => setActiveTab('revenue')}
-          >
-            <FiDollarSign /> Revenus
-          </button>
-          <button 
             className={`tab-btn ${activeTab === 'patients' ? 'active' : ''}`}
             onClick={() => setActiveTab('patients')}
           >
@@ -391,7 +364,7 @@ function AnalyticsPage() {
                 </div>
                 <div className="summary-info">
                   <span className="summary-value">{commonDiagnoses.length}</span>
-                  <span className="summary-label">Diagnostics courants</span>
+                  <span className="summary-label">Top diagnostics</span>
                 </div>
               </div>
               <div className="summary-card">
@@ -455,6 +428,7 @@ function AnalyticsPage() {
                   <div className="chart-card">
                     <div className="chart-header">
                       <h3>Répartition des Diagnostics</h3>
+                      <p className="chart-subtitle">Top 5 diagnostics les plus fréquents (base patients)</p>
                     </div>
                     <div className="pie-chart-container">
                       <ResponsiveContainer width="100%" height={200}>
@@ -518,52 +492,6 @@ function AnalyticsPage() {
                 </>
               )}
 
-              {/* Revenue Tab: Show revenue evolution chart */}
-              {activeTab === 'revenue' && (
-                <>
-                  <div className="chart-card large">
-                    <div className="chart-header">
-                      <div>
-                        <h3>Évolution des Revenus</h3>
-                        <p className="chart-subtitle">Revenus et nombre de patients par mois</p>
-                      </div>
-                      <div className="chart-legend">
-                        <span className="legend-item"><span className="dot blue"></span> Revenus (DH)</span>
-                        <span className="legend-item"><span className="dot green"></span> Patients</span>
-                      </div>
-                    </div>
-                    <ResponsiveContainer width="100%" height={280}>
-                      <AreaChart data={monthlyRevenueData}>
-                        <defs>
-                          <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2}/>
-                            <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                        <XAxis dataKey="period" stroke="#9CA3AF" fontSize={12} />
-                        <YAxis stroke="#9CA3AF" fontSize={12} />
-                        <Tooltip 
-                          contentStyle={{ 
-                            background: '#fff', 
-                            border: 'none', 
-                            borderRadius: '10px', 
-                            boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
-                          }} 
-                        />
-                        <Area 
-                          type="monotone"
-                          dataKey="revenue" 
-                          stroke="#3B82F6"
-                          fill="url(#colorRevenue)"
-                          name="Revenus"
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </>
-              )}
-
               {/* Patients Tab: Show diagnosis distribution + demographics */}
               {activeTab === 'patients' && (
                 <>
@@ -571,6 +499,7 @@ function AnalyticsPage() {
                   <div className="chart-card">
                     <div className="chart-header">
                       <h3>Répartition des Diagnostics</h3>
+                      <p className="chart-subtitle">Top 5 diagnostics les plus fréquents (base patients)</p>
                     </div>
                     <div className="pie-chart-container">
                       <ResponsiveContainer width="100%" height={200}>
@@ -585,7 +514,7 @@ function AnalyticsPage() {
                             dataKey="value"
                           >
                             {commonDiagnoses.map((_, index) => (
-                              <Cell key={`cell-${index}`} fill={diagnosisColors[index % diagnosisColors.length]} />
+                              <Cell key={`cell-patients-${index}`} fill={diagnosisColors[index % diagnosisColors.length]} />
                             ))}
                           </Pie>
                           <Tooltip />
@@ -701,11 +630,6 @@ function AnalyticsPage() {
               <FiBarChart2 />
               <span>Statistiques Patients</span>
               <small>Excel</small>
-            </button>
-            <button className="export-option">
-              <FiDollarSign />
-              <span>Rapport Financier</span>
-              <small>PDF</small>
             </button>
             <button className="export-option">
               <FiActivity />
