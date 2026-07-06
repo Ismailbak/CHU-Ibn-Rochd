@@ -47,8 +47,17 @@ function AdminDashboard() {
       'CREATE_APPOINTMENT': 'Ajout rendez-vous',
       'UPDATE_APPOINTMENT': 'Modification rendez-vous',
       'DELETE_APPOINTMENT': 'Suppression rendez-vous',
+      'PASSWORD_RESET_REQUEST': 'Demande mot de passe oublié',
+      'RESET_PASSWORD': 'Réinitialisation mot de passe',
+      'CHANGE_PASSWORD': 'Changement mot de passe',
     };
     return actions[action] || action;
+  };
+
+  const formatLogStatus = (status) => {
+    if (status === 'success') return { label: 'Succès', tone: 'success' };
+    if (status === 'pending') return { label: 'En attente', tone: 'pending' };
+    return { label: 'Échec', tone: 'error' };
   };
 
   const getActionIcon = (action) => {
@@ -168,8 +177,8 @@ function AdminDashboard() {
                       <span className="admin-activity-user">{item.username || 'Inconnu'}</span>
                       <span className="admin-activity-action">{formatAction(item.action)}</span>
                     </div>
-                    <span className={`admin-activity-badge admin-activity-badge--${item.status === 'success' ? 'success' : 'error'}`}>
-                      {item.status === 'success' ? 'Succès' : 'Échec'}
+                    <span className={`admin-activity-badge admin-activity-badge--${formatLogStatus(item.status).tone}`}>
+                      {formatLogStatus(item.status).label}
                     </span>
                     <span className="admin-activity-time">{formatTime(item.timestamp)}</span>
                   </li>

@@ -83,3 +83,32 @@ def send_manual_notification(
         db.refresh(n)
         
     return created_notifications
+
+
+def notify_admins_password_reset(db: Session, user: UserModel) -> None:
+    """Alert all active admins when a user requests a password reset."""
+    admins = db.query(UserModel).filter(UserModel.is_admin == True, UserModel.is_active == True).all()
+    if not admins:
+        return
+
+    display = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.username
+    title = "Demande de réinitialisation de mot de passe"
+    message = (
+        f"{display} ({user.email}) a demandé une réinitialisation de mot de passe. "
+        f"Allez dans Admin → Utilisateurs pour réinitialiser le mot de passe."
+    )
+
+    for admin in admins:
+        if admin.id == user.id:
+            continue
+        db.add(
+            NotificationModel(
+                user_id=admin.id,
+                sender_id=user.id,
+                title=title,
+                message=message,
+                is_public=False,
+                category="security",
+            )
+        )
+    db.commit()

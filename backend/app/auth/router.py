@@ -24,6 +24,7 @@ from app.auth.service import (
     verify_password,
 )
 from app.analytics.audit import log_action
+from app.notifications.service import notify_admins_password_reset
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -135,6 +136,7 @@ def request_password_reset(
             details="Demande de réinitialisation de mot de passe",
             ip_address=client_ip,
         )
+        notify_admins_password_reset(db, user)
     return {
         "message": (
             "Si un compte correspond à cette adresse, votre demande a été enregistrée. "

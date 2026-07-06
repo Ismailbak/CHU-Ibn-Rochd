@@ -19,7 +19,16 @@ const ACTION_OPTIONS = [
   { value: 'CREATE_APPOINTMENT', label: 'Ajout rendez-vous' },
   { value: 'UPDATE_APPOINTMENT', label: 'Modification rendez-vous' },
   { value: 'DELETE_APPOINTMENT', label: 'Suppression rendez-vous' },
+  { value: 'PASSWORD_RESET_REQUEST', label: 'Demande mot de passe oublié' },
+  { value: 'RESET_PASSWORD', label: 'Réinitialisation mot de passe (admin)' },
+  { value: 'CHANGE_PASSWORD', label: 'Changement mot de passe' },
 ];
+
+const formatLogStatus = (status) => {
+  if (status === 'success') return { label: 'Succès', className: 'admin-badge--success' };
+  if (status === 'pending') return { label: 'En attente', className: 'admin-badge--pending' };
+  return { label: 'Échec', className: 'admin-badge--error' };
+};
 
 function AdminSecurity() {
   const [statusFilter, setStatusFilter] = useState('');
@@ -103,6 +112,7 @@ function AdminSecurity() {
             <div className="admin-security-filters">
               <button type="button" className={`admin-filter-btn ${statusFilter === '' ? 'active' : ''}`} onClick={() => setStatusFilter('')}>Tous</button>
               <button type="button" className={`admin-filter-btn ${statusFilter === 'success' ? 'active' : ''}`} onClick={() => setStatusFilter('success')}><FiShield /> Succès</button>
+              <button type="button" className={`admin-filter-btn ${statusFilter === 'pending' ? 'active' : ''}`} onClick={() => setStatusFilter('pending')}>En attente</button>
               <button type="button" className={`admin-filter-btn ${statusFilter === 'failure' ? 'active' : ''}`} onClick={() => setStatusFilter('failure')}><FiAlertCircle /> Échecs</button>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -141,7 +151,12 @@ function AdminSecurity() {
                       <td>{formatTime(log.timestamp)}</td>
                       <td>{log.username || 'Inconnu'}</td>
                       <td>{formatAction(log.action)}</td>
-                      <td><span className={`admin-badge ${log.status === 'success' ? 'admin-badge--success' : 'admin-badge--error'}`}>{log.status === 'success' ? 'Succès' : 'Échec'}</span></td>
+                      <td>
+                        {(() => {
+                          const s = formatLogStatus(log.status);
+                          return <span className={`admin-badge ${s.className}`}>{s.label}</span>;
+                        })()}
+                      </td>
                       <td><code className="admin-ip">{log.ip_address || '-'}</code></td>
                     </tr>
                   ))}

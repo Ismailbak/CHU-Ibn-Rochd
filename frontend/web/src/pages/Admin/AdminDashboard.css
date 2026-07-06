@@ -165,6 +165,11 @@
   color: #DC2626;
 }
 
+.admin-activity-badge--pending {
+  background: #FEF3C7;
+  color: #B45309;
+}
+
 .admin-activity-time {
   font-size: 12px;
   color: #9CA3AF;
@@ -447,6 +452,11 @@
 .admin-badge--error {
   background: #FEE2E2;
   color: #DC2626;
+}
+
+.admin-badge--pending {
+  background: #FEF3C7;
+  color: #B45309;
 }
 
 .admin-badge--medecin {
