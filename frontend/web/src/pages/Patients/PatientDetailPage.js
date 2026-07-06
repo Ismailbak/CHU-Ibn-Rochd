@@ -453,7 +453,9 @@ function PatientDetailPage() {
             <div className="appointments-section">
               <div className="section-header">
                 <h3>Rendez-vous</h3>
-                <button className="add-btn"><FiPlusCircle /> Nouveau RDV</button>
+                <button className="add-btn" onClick={() => navigate(`/appointments?patientId=${patient.id}&new=1`)}>
+                  <FiPlusCircle /> Nouveau RDV
+                </button>
               </div>
               <div className="appointments-list">
                 {(patient.appointments && Array.isArray(patient.appointments) && patient.appointments.length > 0)
@@ -534,11 +536,18 @@ function PatientDetailPage() {
               </div>
               <div className="acts-list">
                 {(patient.acts && Array.isArray(patient.acts) && patient.acts.length > 0)
-                  ? patient.acts.map((act) => (
+                  ? patient.acts.map((act) => {
+                      const actDate = act.act_date || act.date;
+                      const dateTime = actDate ? new Date(actDate) : null;
+                      const day = dateTime && !Number.isNaN(dateTime.getTime()) ? dateTime.getDate() : '—';
+                      const month = dateTime && !Number.isNaN(dateTime.getTime())
+                        ? dateTime.toLocaleDateString('fr-FR', { month: 'short' })
+                        : '';
+                      return (
                       <div key={act.id} className="act-card">
                         <div className="act-date">
-                          <span className="day">{new Date(act.date).getDate()}</span>
-                          <span className="month">{new Date(act.date).toLocaleDateString('fr-FR', { month: 'short' })}</span>
+                          <span className="day">{day}</span>
+                          <span className="month">{month}</span>
                         </div>
                         <div className="act-info">
                           <h4>
@@ -555,7 +564,8 @@ function PatientDetailPage() {
                           {act.status === 'completed' ? 'Terminé' : 'En attente'}
                         </span>
                       </div>
-                    ))
+                    );
+                    })
                   : <p className="empty-state">Aucun acte enregistré. <button type="button" className="link-btn" onClick={() => navigate(`/medical-acts?patientId=${patient.id}&new=1`)}>Ajouter un acte</button></p>
                 }
               </div>
@@ -581,7 +591,7 @@ function PatientDetailPage() {
       {/* Lab Result Modal */}
       {showLabResultModal && (
         <div className="modal-overlay" onClick={() => setShowLabResultModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <div className="modal-content lab-result-modal" onClick={e => e.stopPropagation()}>
             <LabResultForm
               patientId={patient.id}
               onSuccess={() => {

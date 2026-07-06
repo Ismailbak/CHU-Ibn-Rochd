@@ -55,7 +55,8 @@ function AppointmentForm({
   defaultNotes,
   isEditing,
   appointmentId,
-  lockDate
+  lockDate,
+  initialStep = 1,
 }) {
   const initialDate = defaultDate || '';
   const initialTime = defaultTime || '';
@@ -69,7 +70,9 @@ function AppointmentForm({
     patientId: defaultPatientId || '',
     notes: defaultNotes || ''
   });
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(() =>
+    initialStep >= 1 && initialStep <= STEPS.length ? initialStep : 1
+  );
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -111,7 +114,7 @@ function AppointmentForm({
 
   const filteredPatients = patients;
 
-  const selectedPatient = patients.find(p => p.id === parseInt(form.patientId, 10));
+  const selectedPatient = patients.find(p => p.id == form.patientId);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -176,7 +179,7 @@ function AppointmentForm({
           time: defaultTime || '',
           datetime_scheduled: buildDateTimeValue(defaultDate || '', defaultTime || '')
         });
-        setStep(1);
+        setStep(initialStep >= 1 && initialStep <= STEPS.length ? initialStep : 1);
         setSubmitted(false);
         if (onSuccess) onSuccess();
         if (onClose) onClose();

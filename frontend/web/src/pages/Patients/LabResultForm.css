@@ -1,195 +1,52 @@
-.lab-result-form-container {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  max-width: 600px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+/* Lab result form — extends AppointmentForm (af-*) design system */
+
+.lrf-wrapper {
+    max-width: 100%;
 }
 
-.lab-result-form-container .form-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  border-bottom: 2px solid #f0f0f0;
-  padding-bottom: 16px;
+.lrf-form {
+    max-height: calc(90vh - 120px);
+    overflow-y: auto;
 }
 
-.lab-result-form-container .form-header h2 {
-  margin: 0;
-  font-size: 20px;
-  color: #333;
+.lrf-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
 }
 
-.lab-result-form-container .close-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #999;
-  transition: color 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.lrf-abnormal-chip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 10px;
+    background: #FAFAFA;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
 }
 
-.lab-result-form-container .close-btn:hover {
-  color: #333;
+.lrf-abnormal-chip:hover {
+    border-color: #6EE7B7;
+    background: #F0FDF4;
 }
 
-.lab-result-form-container .success-message {
-  background: #d4edda;
-  color: #155724;
-  padding: 12px 16px;
-  border-radius: 6px;
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  border-left: 4px solid #28a745;
+.lrf-abnormal-chip.selected {
+    border-color: #EF4444;
+    background: #FEF2F2;
+    color: #B91C1C;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08);
 }
 
-.lab-result-form-container .error-message {
-  background: #f8d7da;
-  color: #721c24;
-  padding: 12px 16px;
-  border-radius: 6px;
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  border-left: 4px solid #dc3545;
-}
-
-.lab-result-form-container .form-section {
-  margin-bottom: 24px;
-}
-
-.lab-result-form-container .form-section h3 {
-  margin: 0 0 16px 0;
-  font-size: 16px;
-  color: #333;
-  font-weight: 600;
-}
-
-.lab-result-form-container .form-group {
-  margin-bottom: 16px;
-}
-
-.lab-result-form-container .form-group label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
-}
-
-.lab-result-form-container .form-group input[type="text"],
-.lab-result-form-container .form-group input[type="date"],
-.lab-result-form-container .form-group select,
-.lab-result-form-container .form-group textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  font-family: inherit;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.lab-result-form-container .form-group input[type="text"]:focus,
-.lab-result-form-container .form-group input[type="date"]:focus,
-.lab-result-form-container .form-group select:focus,
-.lab-result-form-container .form-group textarea:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-}
-
-.lab-result-form-container .form-group input.error,
-.lab-result-form-container .form-group select.error,
-.lab-result-form-container .form-group textarea.error {
-  border-color: #dc3545;
-}
-
-.lab-result-form-container .form-group input.error:focus,
-.lab-result-form-container .form-group select.error:focus,
-.lab-result-form-container .form-group textarea.error:focus {
-  border-color: #dc3545;
-  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
-}
-
-.lab-result-form-container .error-text {
-  display: block;
-  color: #dc3545;
-  font-size: 12px;
-  margin-top: 4px;
-}
-
-.lab-result-form-container .form-group.checkbox {
-  display: flex;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.lab-result-form-container .form-group.checkbox label {
-  display: flex;
-  align-items: center;
-  margin-bottom: 0;
-  cursor: pointer;
-  flex: 1;
-}
-
-.lab-result-form-container .form-group.checkbox input[type="checkbox"] {
-  width: auto;
-  margin-right: 8px;
-  cursor: pointer;
-}
-
-.lab-result-form-container .form-group.checkbox span {
-  font-size: 14px;
-  color: #333;
-}
-
-.lab-result-form-container .form-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  padding-top: 24px;
-  border-top: 1px solid #f0f0f0;
-}
-
-.lab-result-form-container .btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.lab-result-form-container .btn-primary {
-  background: #007bff;
-  color: white;
-}
-
-.lab-result-form-container .btn-primary:hover:not(:disabled) {
-  background: #0056b3;
-}
-
-.lab-result-form-container .btn-secondary {
-  background: #f0f0f0;
-  color: #333;
-}
-
-.lab-result-form-container .btn-secondary:hover:not(:disabled) {
-  background: #e0e0e0;
-}
-
-.lab-result-form-container .btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+@media (max-width: 560px) {
+    .lrf-grid-2 {
+        grid-template-columns: 1fr;
+    }
 }

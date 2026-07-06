@@ -1,24 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiCheck, FiAlertCircle } from 'react-icons/fi';
+import {
+  FiX, FiCheck, FiAlertCircle, FiPlus, FiActivity,
+  FiCalendar, FiClipboard
+} from 'react-icons/fi';
 import { createActResult, getPatientMedicalActs } from '../../api/api';
+import '../Appointments/AppointmentForm.css';
 import './LabResultForm.css';
 
-function LabResultForm({ patientId, onSuccess, onClose }) {
-  const [form, setForm] = useState({
-    act_id: '',
-    result_date: new Date().toISOString().split('T')[0],
-    result_name: '',
-    result_value: '',
-    result_unit: '',
-    result_category: '',
-    is_abnormal: false,
-    notes: '',
-  });
+const CATEGORIES = [
+  'Hématologie',
+  'Biochimie',
+  'Immunologie',
+  'Microbiologie',
+  'Autre',
+];
 
+const EMPTY_FORM = {
+  act_id: '',
+  result_date: new Date().toISOString().split('T')[0],
+  result_name: '',
+  result_value: '',
+  result_unit: '',
+  result_category: '',
+  is_abnormal: false,
+  notes: '',
+};
+
+function LabResultForm({ patientId, onSuccess, onClose }) {
+  const [form, setForm] = useState(EMPTY_FORM);
   const [medicalActs, setMedicalActs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [successMessage, setSuccessMessage] = useState('');
+  const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
     const fetchMedicalActs = async () => {
@@ -34,12 +47,10 @@ function LabResultForm({ patientId, onSuccess, onClose }) {
 
   const validateForm = () => {
     const newErrors = {};
-    
     if (!form.act_id) newErrors.act_id = 'Sélectionnez un acte médical';
     if (!form.result_name) newErrors.result_name = 'Le nom de l\'analyse est requis';
     if (!form.result_value) newErrors.result_value = 'La valeur du résultat est requise';
     if (!form.result_date) newErrors.result_date = 'La date est requise';
-
     return newErrors;
   };
 
@@ -47,17 +58,19 @@ function LabResultForm({ patientId, onSuccess, onClose }) {
     const { name, value, type, checked } = e.target;
     setForm(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : value,
     }));
-    // Clear error for this field
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
 
+  const toggleAbnormal = () => {
+    setForm(prev => ({ ...prev, is_abnormal: !prev.is_abnormal }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSuccessMessage('');
 
     const newErrors = validateForm();
     if (Object.keys(newErrors).length > 0) {
@@ -67,8 +80,8 @@ function LabResultForm({ patientId, onSuccess, onClose }) {
 
     setLoading(true);
     try {
-      const submissionData = {
-        act_id: parseInt(form.act_id),
+      await createActResult({
+        act_id: parseInt(form.act_id, 10),
         patient_id: patientId,
         result_date: form.result_date,
         result_name: form.result_name,
@@ -77,28 +90,13 @@ function LabResultForm({ patientId, onSuccess, onClose }) {
         result_category: form.result_category || null,
         is_abnormal: form.is_abnormal,
         notes: form.notes || null,
-      };
-
-      await createActResult(submissionData);
-      setSuccessMessage('Résultat de laboratoire ajouté avec succès!');
-      
-      // Reset form
-      setForm({
-        act_id: '',
-        result_date: new Date().toISOString().split('T')[0],
-        result_name: '',
-        result_value: '',
-        result_unit: '',
-        result_category: '',
-        is_abnormal: false,
-        notes: '',
       });
-      setErrors({});
 
-      // Call onSuccess callback
+      setSubmitted(true);
       setTimeout(() => {
-        onSuccess();
-      }, 1500);
+        if (onSuccess) onSuccess();
+        if (onClose) onClose();
+      }, 1400);
     } catch (error) {
       console.error('Erreur lors de la création du résultat:', error);
       setErrors({ submit: error.message || 'Une erreur est survenue' });
@@ -107,68 +105,105 @@ function LabResultForm({ patientId, onSuccess, onClose }) {
     }
   };
 
+  const formatActDate = (act) => {
+    const raw = act.act_date || act.date;
+    if (!raw) return '';
+    const d = new Date(raw);
+    return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('fr-FR');
+  };
+
+  if (submitted) {
+    return (
+      <div className="af-wrapper lrf-wrapper">
+        <div className="af-success">
+          <div className="af-success-icon"><FiCheck /></div>
+          <h3>Résultat enregistré !</h3>
+          <p>
+            <strong>{form.result_name}</strong>
+            {form.result_value && <> — {form.result_value}{form.result_unit ? ` ${form.result_unit}` : ''}</>}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="lab-result-form-container">
-      <div className="form-header">
-        <h2>Ajouter un résultat de laboratoire</h2>
-        <button className="close-btn" onClick={onClose}>
-          <FiX />
-        </button>
+    <div className="af-wrapper lrf-wrapper">
+      <div className="af-header">
+        <div className="af-header-left">
+          <div className="af-header-icon"><FiPlus /></div>
+          <div>
+            <h2 className="af-title">Nouveau résultat</h2>
+            <p className="af-subtitle">Enregistrer un résultat de laboratoire</p>
+          </div>
+        </div>
+        {onClose && (
+          <button className="af-close-btn" onClick={onClose} type="button" aria-label="Fermer">
+            <FiX />
+          </button>
+        )}
       </div>
 
-      {successMessage && (
-        <div className="success-message">
-          <FiCheck /> {successMessage}
-        </div>
-      )}
+      <form onSubmit={handleSubmit} className="af-form lrf-form" noValidate>
+        <div className="af-section">
+          <div className="af-section-title">
+            <FiClipboard className="af-section-icon" />
+            <span>Informations du résultat</span>
+          </div>
 
-      {errors.submit && (
-        <div className="error-message">
-          <FiAlertCircle /> {errors.submit}
-        </div>
-      )}
+          {errors.submit && (
+            <div className="af-error-banner">
+              <FiAlertCircle /> {errors.submit}
+            </div>
+          )}
 
-      <form onSubmit={handleSubmit} className="lab-result-form">
-        <div className="form-section">
-          <h3>Informations du résultat</h3>
-
-          {/* Medical Act Selection */}
-          <div className="form-group">
-            <label htmlFor="act_id">Acte médical *</label>
+          <div className="af-field">
+            <label className="af-label" htmlFor="act_id">
+              Acte médical <span className="af-required">*</span>
+            </label>
             <select
               id="act_id"
               name="act_id"
               value={form.act_id}
               onChange={handleChange}
-              className={errors.act_id ? 'error' : ''}
+              className={`af-input ${errors.act_id ? 'af-input-error' : ''}`}
             >
-              <option value="">-- Sélectionnez un acte --</option>
+              <option value="">— Sélectionnez un acte —</option>
               {medicalActs.map(act => (
                 <option key={act.id} value={act.id}>
-                  {act.act_type} - {new Date(act.date).toLocaleDateString('fr-FR')}
+                  {act.act_type || act.type || 'Acte'} — {formatActDate(act)}
                 </option>
               ))}
             </select>
-            {errors.act_id && <span className="error-text">{errors.act_id}</span>}
+            {errors.act_id && (
+              <span className="af-error-msg"><FiAlertCircle />{errors.act_id}</span>
+            )}
           </div>
 
-          {/* Result Date */}
-          <div className="form-group">
-            <label htmlFor="result_date">Date du résultat *</label>
-            <input
-              id="result_date"
-              type="date"
-              name="result_date"
-              value={form.result_date}
-              onChange={handleChange}
-              className={errors.result_date ? 'error' : ''}
-            />
-            {errors.result_date && <span className="error-text">{errors.result_date}</span>}
+          <div className="af-field">
+            <label className="af-label" htmlFor="result_date">
+              Date du résultat <span className="af-required">*</span>
+            </label>
+            <div className="af-input-icon-wrapper">
+              <FiCalendar className="af-input-icon" />
+              <input
+                id="result_date"
+                type="date"
+                name="result_date"
+                value={form.result_date}
+                onChange={handleChange}
+                className={`af-input af-input-with-icon ${errors.result_date ? 'af-input-error' : ''}`}
+              />
+            </div>
+            {errors.result_date && (
+              <span className="af-error-msg"><FiAlertCircle />{errors.result_date}</span>
+            )}
           </div>
 
-          {/* Result Name */}
-          <div className="form-group">
-            <label htmlFor="result_name">Nom de l'analyse *</label>
+          <div className="af-field">
+            <label className="af-label" htmlFor="result_name">
+              Nom de l&apos;analyse <span className="af-required">*</span>
+            </label>
             <input
               id="result_name"
               type="text"
@@ -176,102 +211,125 @@ function LabResultForm({ patientId, onSuccess, onClose }) {
               placeholder="Ex: Glycémie, Créatinine, etc."
               value={form.result_name}
               onChange={handleChange}
-              className={errors.result_name ? 'error' : ''}
+              className={`af-input ${errors.result_name ? 'af-input-error' : ''}`}
             />
-            {errors.result_name && <span className="error-text">{errors.result_name}</span>}
+            {errors.result_name && (
+              <span className="af-error-msg"><FiAlertCircle />{errors.result_name}</span>
+            )}
           </div>
 
-          {/* Result Value */}
-          <div className="form-group">
-            <label htmlFor="result_value">Valeur du résultat *</label>
-            <input
-              id="result_value"
-              type="text"
-              name="result_value"
-              placeholder="Ex: 95, 1.2, etc."
-              value={form.result_value}
-              onChange={handleChange}
-              className={errors.result_value ? 'error' : ''}
-            />
-            {errors.result_value && <span className="error-text">{errors.result_value}</span>}
-          </div>
-
-          {/* Result Unit */}
-          <div className="form-group">
-            <label htmlFor="result_unit">Unité</label>
-            <input
-              id="result_unit"
-              type="text"
-              name="result_unit"
-              placeholder="Ex: mg/dL, mmol/L, etc."
-              value={form.result_unit}
-              onChange={handleChange}
-            />
-          </div>
-
-          {/* Result Category */}
-          <div className="form-group">
-            <label htmlFor="result_category">Catégorie</label>
-            <select
-              id="result_category"
-              name="result_category"
-              value={form.result_category}
-              onChange={handleChange}
-            >
-              <option value="">-- Sélectionnez une catégorie --</option>
-              <option value="Hématologie">Hématologie</option>
-              <option value="Biochimie">Biochimie</option>
-              <option value="Immunologie">Immunologie</option>
-              <option value="Microbiologie">Microbiologie</option>
-              <option value="Autre">Autre</option>
-            </select>
-          </div>
-
-          {/* Abnormal Flag */}
-          <div className="form-group checkbox">
-            <label htmlFor="is_abnormal">
+          <div className="lrf-grid-2">
+            <div className="af-field">
+              <label className="af-label" htmlFor="result_value">
+                Valeur du résultat <span className="af-required">*</span>
+              </label>
               <input
-                id="is_abnormal"
-                type="checkbox"
-                name="is_abnormal"
-                checked={form.is_abnormal}
+                id="result_value"
+                type="text"
+                name="result_value"
+                placeholder="Ex: 95, 1.2, etc."
+                value={form.result_value}
                 onChange={handleChange}
+                className={`af-input ${errors.result_value ? 'af-input-error' : ''}`}
               />
-              <span>Résultat anormal</span>
-            </label>
+              {errors.result_value && (
+                <span className="af-error-msg"><FiAlertCircle />{errors.result_value}</span>
+              )}
+            </div>
+
+            <div className="af-field">
+              <label className="af-label" htmlFor="result_unit">
+                Unité <span className="af-optional">(optionnel)</span>
+              </label>
+              <input
+                id="result_unit"
+                type="text"
+                name="result_unit"
+                placeholder="Ex: mg/dL, mmol/L"
+                value={form.result_unit}
+                onChange={handleChange}
+                className="af-input"
+              />
+            </div>
           </div>
 
-          {/* Notes */}
-          <div className="form-group">
-            <label htmlFor="notes">Notes supplémentaires</label>
+          <div className="lrf-grid-2">
+            <div className="af-field">
+              <label className="af-label" htmlFor="result_category">
+                Catégorie <span className="af-optional">(optionnel)</span>
+              </label>
+              <select
+                id="result_category"
+                name="result_category"
+                value={form.result_category}
+                onChange={handleChange}
+                className="af-input"
+              >
+                <option value="">— Sélectionnez une catégorie —</option>
+                {CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="af-field">
+              <label className="af-label">Statut</label>
+              <button
+                type="button"
+                className={`lrf-abnormal-chip ${form.is_abnormal ? 'selected' : ''}`}
+                onClick={toggleAbnormal}
+              >
+                <FiActivity />
+                {form.is_abnormal ? 'Résultat anormal' : 'Résultat normal'}
+              </button>
+            </div>
+          </div>
+
+          <div className="af-field">
+            <label className="af-label" htmlFor="notes">
+              Notes supplémentaires <span className="af-optional">(optionnel)</span>
+            </label>
             <textarea
               id="notes"
               name="notes"
               placeholder="Ajoutez des notes si nécessaire..."
               value={form.notes}
               onChange={handleChange}
-              rows="3"
+              rows={3}
+              className="af-textarea"
             />
           </div>
         </div>
 
-        {/* Form Actions */}
-        <div className="form-actions">
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn btn-secondary"
-            disabled={loading}
-          >
-            Annuler
-          </button>
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={loading}
-          >
-            {loading ? 'Ajout en cours...' : 'Ajouter le résultat'}
-          </button>
+        <div className="af-nav">
+          <div />
+          <div className="af-nav-right">
+            <button
+              type="button"
+              onClick={onClose}
+              className="af-btn-cancel"
+              disabled={loading}
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              className="af-btn-submit"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <span className="af-spinner" />
+                  Ajout en cours...
+                </>
+              ) : (
+                <>
+                  <FiCheck />
+                  Ajouter le résultat
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </form>
     </div>

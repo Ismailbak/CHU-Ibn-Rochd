@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { FiCalendar, FiClock, FiUser, FiPlus, FiChevronLeft, FiChevronRight, FiCheck, FiX, FiEdit2, FiPhone } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
@@ -85,6 +86,9 @@ const weekDays = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 const APPOINTMENTS_PER_PAGE = 7;
 
 function AppointmentsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [newAppointmentPatientId, setNewAppointmentPatientId] = useState(null);
+
   // State for selected day insights modal
   const [insightsModal, setInsightsModal] = useState({ open: false, date: null, appointments: [] });
 
@@ -117,6 +121,18 @@ function AppointmentsPage() {
   const confirmedThisMonth = stats.confirmedMonth;
   const pending = stats.pending;
   const [showAddModal, setShowAddModal] = useState(false);
+
+  useEffect(() => {
+    const patientId = searchParams.get('patientId');
+    if (searchParams.get('new') === '1' && patientId) {
+      setNewAppointmentPatientId(patientId);
+      setShowAddModal(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete('patientId');
+      next.delete('new');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [viewMode, setViewMode] = useState('list');
@@ -673,8 +689,18 @@ function AppointmentsPage() {
             <div className="modal-content" onClick={e => e.stopPropagation()}>
               <AppointmentForm
                 defaultDate={selectedDate.toISOString().split('T')[0]}
-                onSuccess={async () => { await reloadAppointments(); toast.success('Rendez-vous créé avec succès'); }}
-                onClose={() => { setShowAddModal(false); resetAddForm(); }}
+                defaultPatientId={newAppointmentPatientId || undefined}
+                initialStep={newAppointmentPatientId ? 2 : 1}
+                onSuccess={async () => {
+                  await reloadAppointments();
+                  toast.success('Rendez-vous créé avec succès');
+                  setNewAppointmentPatientId(null);
+                }}
+                onClose={() => {
+                  setShowAddModal(false);
+                  resetAddForm();
+                  setNewAppointmentPatientId(null);
+                }}
               />
             </div>
           </div>

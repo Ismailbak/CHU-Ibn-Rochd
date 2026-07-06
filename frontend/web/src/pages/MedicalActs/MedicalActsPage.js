@@ -841,7 +841,8 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
 // ─── MedicalActsPage ──────────────────────────────────────────────────────────
 
 function MedicalActsPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [newActPatientId, setNewActPatientId] = useState(null);
   const canDeleteMedicalAct = canDeleteClinicalRecords();
   const [stats, setStats] = useState(null);
   const [doctors, setDoctors] = useState([]);
@@ -853,6 +854,19 @@ function MedicalActsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  useEffect(() => {
+    const patientId = searchParams.get('patientId');
+    if (searchParams.get('new') === '1' && patientId) {
+      setNewActPatientId(patientId);
+      setShowAddModal(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete('patientId');
+      next.delete('new');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
   const [selectedAct, setSelectedAct] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editAct, setEditAct] = useState(null);
@@ -1114,11 +1128,17 @@ function MedicalActsPage() {
           <div className="modal-overlay">
             <div className="modal-content" onClick={e => e.stopPropagation()}>
               <MedicalActForm
+                defaultPatientId={newActPatientId || undefined}
+                initialStep={newActPatientId ? 2 : 1}
                 onSuccess={() => {
                   setShowAddModal(false);
+                  setNewActPatientId(null);
                   loadActs();
                 }}
-                onClose={() => setShowAddModal(false)}
+                onClose={() => {
+                  setShowAddModal(false);
+                  setNewActPatientId(null);
+                }}
               />
             </div>
           </div>

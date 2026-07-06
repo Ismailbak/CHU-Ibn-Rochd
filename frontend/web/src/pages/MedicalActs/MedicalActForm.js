@@ -182,10 +182,16 @@ function ClinicalFormWrapper({ formName, formTypes, formId, form, setForm, FORM_
   );
 }
 
-function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
+function MedicalActForm({ onSuccess, onClose, initialData, isEdit, defaultPatientId, initialStep = 1 }) {
   const toast = useToast();
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [step, setStep] = useState(1);
+  const resolvedInitialStep = initialStep >= 1 && initialStep <= STEPS.length ? initialStep : 1;
+  const [form, setForm] = useState(() => ({
+    ...EMPTY_FORM,
+    patientId: defaultPatientId || '',
+  }));
+  const [step, setStep] = useState(() =>
+    defaultPatientId ? Math.max(resolvedInitialStep, 2) : resolvedInitialStep
+  );
   const [patients, setPatients] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -274,8 +280,11 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
       setSelectedDrug('');
       setTreatmentDetails({ duration: '', dosage: '', frequency: '' });
     } else {
-      setForm(EMPTY_FORM);
-      setStep(1);
+      setForm({
+        ...EMPTY_FORM,
+        ...(defaultPatientId ? { patientId: defaultPatientId } : {}),
+      });
+      setStep(defaultPatientId ? Math.max(resolvedInitialStep, 2) : 1);
       setErrors({});
       setSubmitted(false);
       setSearchQuery('');
@@ -283,7 +292,28 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
       setSelectedDrug('');
       setTreatmentDetails({ duration: '', dosage: '', frequency: '' });
     }
-  }, [initialData, isEdit]);
+  }, [initialData, isEdit, defaultPatientId, resolvedInitialStep]);
+
+  useEffect(() => {
+    if (!defaultPatientId || isEdit) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await getPatient(defaultPatientId);
+        if (cancelled || !res.data) return;
+        const patient = res.data;
+        setForm(prev => ({
+          ...prev,
+          patientId: patient.id,
+          patientName: `${patient.first_name} ${patient.last_name}`,
+        }));
+        setPatients(prev => (prev.some(p => p.id == patient.id) ? prev : [patient, ...prev]));
+      } catch {
+        /* patient may have been removed */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [defaultPatientId, isEdit]);
 
   useEffect(() => {
     if (step !== 1) return undefined;
@@ -808,6 +838,13 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
               <FiActivity className="maf-section-icon" />
               <span>Type de forme clinique</span>
             </div>
+
+            {form.patientName && (
+              <div className="maf-selected-patient-banner">
+                <FiUser className="maf-banner-icon" />
+                <span>{form.patientName}</span>
+              </div>
+            )}
 
             <div className="maf-field">
               <label className="maf-label">
