@@ -11,6 +11,7 @@ from app.auth.router import router as auth_router
 from app.chat.router import router as chat_router
 from app.core.config import settings
 from app.core.database import Base, engine
+from app.core.middleware.mojibake import MojibakeRepairMiddleware
 from app.core.utils.rate_limiting import setup_rate_limiting
 from app.forms.router import router as forms_router
 from app.medical_acts.router import router as medical_acts_router
@@ -53,6 +54,9 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["X-Total-Count"],
 )
+
+# Repair legacy UTF-8 mojibake in JSON responses (patients, diagnoses, cities, etc.)
+app.add_middleware(MojibakeRepairMiddleware)
 
 # Setup rate limiting
 setup_rate_limiting(app)

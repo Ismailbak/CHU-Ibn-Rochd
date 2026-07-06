@@ -17,6 +17,7 @@ from app.models.medical_act import MedicalAct, ActDiagnosis
 from app.models.appointment import Appointment
 from app.models.act_result import ActResult
 from app.analytics.audit import log_action
+from app.core.utils.text_encoding import repair_text
 from app.pdf import service as pdf_service
 from app.patients.deletion import delete_patient_cascade
 
@@ -124,7 +125,7 @@ _CITY_ALIASES = {
 def _normalize_diagnosis(value: Optional[str]) -> Optional[str]:
     if value is None:
         return None
-    cleaned = str(value).strip()
+    cleaned = repair_text(str(value).strip())
     if not cleaned or cleaned.lower() in _SKIP_DIAGNOSIS_LABELS:
         return None
     return cleaned
@@ -144,11 +145,11 @@ def _normalize_text(value: Optional[str]) -> str:
 
 
 def _resolve_display_city(city: Optional[str], address: Optional[str]) -> Optional[str]:
-    cleaned_city = (city or "").strip()
+    cleaned_city = repair_text((city or "").strip()) or ""
     if cleaned_city:
         return cleaned_city
 
-    normalized_address = _normalize_text(address)
+    normalized_address = _normalize_text(repair_text(address))
     if not normalized_address:
         return None
 
@@ -262,30 +263,30 @@ def _patient_to_dict(
     display_city = _resolve_display_city(patient.city, patient.address)
     patient_dict = {
         "id": patient.id,
-        "first_name": patient.first_name,
-        "last_name": patient.last_name,
-        "civility": patient.civility,
+        "first_name": repair_text(patient.first_name),
+        "last_name": repair_text(patient.last_name),
+        "civility": repair_text(patient.civility),
         "gender": patient.gender,
         "date_of_birth": patient.date_of_birth.isoformat() if isinstance(patient.date_of_birth, date) else patient.date_of_birth,
         "age": calculate_age(patient.date_of_birth),  # Computed, never stored
         "phone": patient.phone,
         "email": patient.email,
-        "address": patient.address,
-        "city": patient.city,
+        "address": repair_text(patient.address),
+        "city": repair_text(patient.city),
         "display_city": display_city,
-        "marital_status": patient.marital_status,
-        "nationality": patient.nationality,
-        "profession": patient.profession,
-        "insurance": patient.insurance,
+        "marital_status": repair_text(patient.marital_status),
+        "nationality": repair_text(patient.nationality),
+        "profession": repair_text(patient.profession),
+        "insurance": repair_text(patient.insurance),
         "insurance_number": patient.insurance_number,
         "blood_type": patient.blood_type,
-        "emergency_contact_name": patient.emergency_contact_name,
-        "emergency_contact_relation": patient.emergency_contact_relation,
+        "emergency_contact_name": repair_text(patient.emergency_contact_name),
+        "emergency_contact_relation": repair_text(patient.emergency_contact_relation),
         "emergency_contact_phone": patient.emergency_contact_phone,
         "primary_diagnosis": primary,
         "display_diagnosis": display,
-        "notes": patient.notes,
-        "notes_admin": patient.notes_admin,
+        "notes": repair_text(patient.notes),
+        "notes_admin": repair_text(patient.notes_admin),
         "status": patient.status,
         "ipp": patient.ipp,
         "created_at": patient.created_at.isoformat() if patient.created_at else None,

@@ -1,6 +1,6 @@
 from app.patients.service import PatientService
 from app.core.utils.preprocessing import clean_text, anonymize_text
-from app.core.utils.text_encoding import repair_utf8_mojibake
+from app.core.utils.text_encoding import repair_utf8_mojibake, repair_deep, repair_text
 from app.analytics.service import _classify_appointment_reason
 
 
@@ -45,3 +45,23 @@ def test_classify_appointment_reason():
     assert _classify_appointment_reason("Urgence douleur") == "urgences"
     assert _classify_appointment_reason("Contrôle post-op") == "autres"
     assert _classify_appointment_reason(None) == "autres"
+
+
+def test_repair_deep_patient_payload():
+    payload = {
+        "city": "T├®touan",
+        "display_diagnosis": "Lupus ├®ryth├®mateux",
+        "access_token": "keep-me",
+        "nested": [{"notes": "Ost├®oporose"}],
+    }
+    fixed = repair_deep(payload)
+    assert fixed["city"] == "Tétouan"
+    assert fixed["display_diagnosis"] == "Lupus érythémateux"
+    assert fixed["access_token"] == "keep-me"
+    assert fixed["nested"][0]["notes"] == "Ostéoporose"
+
+
+def test_repair_text_idempotent():
+    correct = "Tétouan"
+    assert repair_text(correct) == correct
+    assert repair_text(repair_text("T├®touan")) == correct

@@ -7,6 +7,8 @@ from io import BytesIO
 from datetime import datetime, date
 import os
 
+from app.core.utils.text_encoding import repair_deep
+
 
 def calculate_age(date_of_birth):
     """Calculate age from date of birth."""
@@ -28,6 +30,7 @@ def generate_medical_act_pdf(act_data: dict):
     act_data contains: id, patient_id, patient_name, patient_age, act_type, act_date, 
     category, status, report, notes, description, amount, doctor_id, diagnoses, treatments
     """
+    act_data = repair_deep(act_data)
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=50, leftMargin=50, topMargin=50, bottomMargin=50)
     

@@ -2,7 +2,20 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 MOJIBAKE_MARKERS = ("Ã", "Â", "â€", "├", "⌐", "╢", "ï»¿", "\ufffd")
+
+# Keys whose string values must never be altered (tokens, hashes, paths).
+_SKIP_REPAIR_KEYS = frozenset({
+    "access_token",
+    "token",
+    "hashed_password",
+    "query_hash",
+    "file_path",
+    "profile_picture",
+    "mime_type",
+})
 
 # UTF-8 C3 xx sequences corrupted to "├" + a Latin-1-ish second character (MySQL dump / import issue).
 _BOX_DRAWING_REPLACEMENTS: dict[str, str] = {
@@ -102,3 +115,24 @@ def repair_utf8_mojibake(text: str | None) -> str | None:
         return (-bad, good)
 
     return max(candidates, key=score)
+
+
+def repair_text(text: str | None) -> str | None:
+    """Repair mojibake in a single text field (alias for API/serializers)."""
+    return repair_utf8_mojibake(text)
+
+
+def repair_deep(value: Any, key: str | None = None) -> Any:
+    """Recursively repair mojibake in dict/list JSON payloads."""
+    if isinstance(value, str):
+        return repair_text(value)
+    if isinstance(value, dict):
+        return {
+            k: (v if k in _SKIP_REPAIR_KEYS else repair_deep(v, k))
+            for k, v in value.items()
+        }
+    if isinstance(value, list):
+        return [repair_deep(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(repair_deep(item) for item in value)
+    return value
