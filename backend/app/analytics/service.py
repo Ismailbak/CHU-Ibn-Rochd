@@ -11,6 +11,18 @@ from app.models.medical_act import ActDiagnosis, ActTreatment, MedicalAct
 from app.models.patient import Patient
 
 
+def _classify_appointment_reason(reason: str | None) -> str:
+    """Bucket appointment reason text into chart categories."""
+    text = (reason or "").lower()
+    if "urgence" in text:
+        return "urgences"
+    if "suivi" in text:
+        return "suivis"
+    if "consultation" in text or "consult" in text:
+        return "consultations"
+    return "autres"
+
+
 def get_top_act_diagnoses(
     db: Session,
     start_date: Optional[date] = None,
@@ -81,41 +93,32 @@ def get_summary_stats(db: Session, date_range: str = "6months") -> Dict:
     
     common_diagnoses = get_top_act_diagnoses(db, start_date=None, limit=5)
 
-    # Weekly Activity (current week, filtered by date range)
+    # Weekly appointments (current calendar week — all reasons, CHUIR notes are free text)
     week_start = today - timedelta(days=today.weekday())
-    
+
     daily_activity = []
     days_fr = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
     for i in range(7):
         current_date = week_start + timedelta(days=i)
-        if current_date < start_date:
-            continue
-        
-        # Query by date range for the current date
         day_start = datetime.combine(current_date, datetime.min.time())
         day_end = datetime.combine(current_date, datetime.max.time())
-        
-        count_cons = db.query(func.count(Appointment.id)).filter(
-            Appointment.datetime_scheduled >= day_start,
-            Appointment.datetime_scheduled <= day_end,
-            Appointment.reason.ilike("%Consultation%")
-        ).scalar() or 0
-        count_suivi = db.query(func.count(Appointment.id)).filter(
-            Appointment.datetime_scheduled >= day_start,
-            Appointment.datetime_scheduled <= day_end,
-            Appointment.reason.ilike("%Suivi%")
-        ).scalar() or 0
-        count_urge = db.query(func.count(Appointment.id)).filter(
-            Appointment.datetime_scheduled >= day_start,
-            Appointment.datetime_scheduled <= day_end,
-            Appointment.reason.ilike("%Urgence%")
-        ).scalar() or 0
-        
+
+        counts = {"consultations": 0, "suivis": 0, "urgences": 0, "autres": 0}
+        day_reasons = (
+            db.query(Appointment.reason)
+            .filter(
+                Appointment.datetime_scheduled >= day_start,
+                Appointment.datetime_scheduled <= day_end,
+            )
+            .all()
+        )
+        for (reason,) in day_reasons:
+            counts[_classify_appointment_reason(reason)] += 1
+
         daily_activity.append({
             "day": days_fr[i],
-            "consultations": count_cons,
-            "suivis": count_suivi,
-            "urgences": count_urge
+            **counts,
+            "total": sum(counts.values()),
         })
 
     # Age Distribution

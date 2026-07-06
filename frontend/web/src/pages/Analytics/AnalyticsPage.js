@@ -248,9 +248,11 @@ function AnalyticsPage() {
           item.day || 'N/A',
           String(item.consultations || 0),
           String(item.suivis || 0),
-          String(item.urgences || 0)
+          String(item.urgences || 0),
+          String(item.autres || 0),
+          String(item.total || 0),
         ]);
-        yPosition = addTable(['Jour', 'Consultations', 'Suivis', 'Urgences'], weeklyData, yPosition, [75, 85, 99]);
+        yPosition = addTable(['Jour', 'Consultations', 'Suivis', 'Urgences', 'Autres', 'Total'], weeklyData, yPosition, [75, 85, 99]);
       }
     }
 
@@ -607,7 +609,8 @@ function AnalyticsPage() {
                         />
                         <Bar dataKey="consultations" stackId="a" fill="#3B82F6" radius={[0, 0, 0, 0]} name="Consultations" />
                         <Bar dataKey="suivis" stackId="a" fill="#10B981" radius={[0, 0, 0, 0]} name="Suivis" />
-                        <Bar dataKey="urgences" stackId="a" fill="#EF4444" radius={[4, 4, 0, 0]} name="Urgences" />
+                        <Bar dataKey="urgences" stackId="a" fill="#EF4444" radius={[0, 0, 0, 0]} name="Urgences" />
+                        <Bar dataKey="autres" stackId="a" fill="#9CA3AF" radius={[4, 4, 0, 0]} name="Autres" />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>

@@ -1,6 +1,7 @@
 from app.patients.service import PatientService
 from app.core.utils.preprocessing import clean_text, anonymize_text
 from app.core.utils.text_encoding import repair_utf8_mojibake
+from app.analytics.service import _classify_appointment_reason
 
 
 def anonymize_patient_data(data):
@@ -36,3 +37,11 @@ def test_repair_utf8_mojibake():
     assert repair_utf8_mojibake("PR s├®ropositive") == "PR séropositive"
     assert repair_utf8_mojibake("Syndrome de Sj├Âgren primitif") == "Syndrome de Sjögren primitif"
     assert repair_utf8_mojibake("Ost├®op├®nie") == "Ostéopénie"
+
+
+def test_classify_appointment_reason():
+    assert _classify_appointment_reason("Consultation initiale") == "consultations"
+    assert _classify_appointment_reason("Suivi arthrose") == "suivis"
+    assert _classify_appointment_reason("Urgence douleur") == "urgences"
+    assert _classify_appointment_reason("Contrôle post-op") == "autres"
+    assert _classify_appointment_reason(None) == "autres"

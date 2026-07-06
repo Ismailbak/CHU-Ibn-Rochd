@@ -103,7 +103,9 @@ export default function AnalyticsScreen({ navigation }) {
           <SectionCard title="Activité hebdomadaire" icon="activity">
             <View style={styles.weekTable}>
               {data.weekly_activity.map((w, i) => {
-                const total = (w.consultations || 0) + (w.suivis || 0) + (w.urgences || 0);
+                const total = w.total ?? (
+                  (w.consultations || 0) + (w.suivis || 0) + (w.urgences || 0) + (w.autres || 0)
+                );
                 return (
                   <View key={String(i)} style={styles.weekRow}>
                     <Text style={styles.weekDay}>{String(w.day)}</Text>
