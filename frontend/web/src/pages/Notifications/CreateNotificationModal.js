@@ -87,74 +87,74 @@ const CreateNotificationModal = ({ isOpen, onClose, onCreated }) => {
         <form onSubmit={handleSubmit} className="notification-form" aria-labelledby="notif-modal-title">
           {error && <div className="error-message">{error}</div>}
 
-          <div className="form-section two-column">
-            <div className="field">
-              <label>Catégorie</label>
-              <div className="toggle-group" role="tablist" aria-label="Catégorie">
-                <button
-                  type="button"
-                  className={`toggle-btn ${category === 'patients' ? 'active' : ''}`}
-                  onClick={() => setCategory('patients')}
-                  aria-pressed={category === 'patients'}
-                >
-                  Patients
-                </button>
-                <button
-                  type="button"
-                  className={`toggle-btn ${category === 'results' ? 'active' : ''}`}
-                  onClick={() => setCategory('results')}
-                  aria-pressed={category === 'results'}
-                >
-                  Résultats
-                </button>
-                <button
-                  type="button"
-                  className={`toggle-btn ${category === 'message' ? 'active' : ''}`}
-                  onClick={() => setCategory('message')}
-                  aria-pressed={category === 'message'}
-                >
-                  Message
-                </button>
-              </div>
+          <div className="notif-field-block">
+            <label>Catégorie</label>
+            <div className="notif-segmented notif-segmented-3" role="tablist" aria-label="Catégorie">
+              <button
+                type="button"
+                className={`notif-segment ${category === 'patients' ? 'active' : ''}`}
+                onClick={() => setCategory('patients')}
+                aria-pressed={category === 'patients'}
+              >
+                Patients
+              </button>
+              <button
+                type="button"
+                className={`notif-segment ${category === 'results' ? 'active' : ''}`}
+                onClick={() => setCategory('results')}
+                aria-pressed={category === 'results'}
+              >
+                Résultats
+              </button>
+              <button
+                type="button"
+                className={`notif-segment ${category === 'message' ? 'active' : ''}`}
+                onClick={() => setCategory('message')}
+                aria-pressed={category === 'message'}
+              >
+                Message
+              </button>
+            </div>
+          </div>
+
+          <div className="notif-field-block">
+            <label>Destinataire</label>
+            <div className="notif-segmented notif-segmented-2" role="tablist" aria-label="Destinataire">
+              <button
+                type="button"
+                className={`notif-segment ${recipientType === 'all' ? 'active' : ''}`}
+                onClick={() => setRecipientType('all')}
+                aria-pressed={recipientType === 'all'}
+              >
+                <FiUsers aria-hidden="true" />
+                <span>Tous les médecins</span>
+              </button>
+              <button
+                type="button"
+                className={`notif-segment ${recipientType === 'specific' ? 'active' : ''}`}
+                onClick={() => setRecipientType('specific')}
+                aria-pressed={recipientType === 'specific'}
+              >
+                <FiUser aria-hidden="true" />
+                <span>Médecin spécifique</span>
+              </button>
             </div>
 
-            <div className="field">
-              <label>Destinataire</label>
-              <div className="toggle-group" role="tablist" aria-label="Destinataire">
-                <button
-                  type="button"
-                  className={`toggle-btn ${recipientType === 'all' ? 'active' : ''}`}
-                  onClick={() => setRecipientType('all')}
-                  aria-pressed={recipientType === 'all'}
-                >
-                  <FiUsers /> <span className="toggle-text">Tous les médecins</span>
-                </button>
-                <button
-                  type="button"
-                  className={`toggle-btn ${recipientType === 'specific' ? 'active' : ''}`}
-                  onClick={() => setRecipientType('specific')}
-                  aria-pressed={recipientType === 'specific'}
-                >
-                  <FiUser /> <span className="toggle-text">Médecin spécifique</span>
-                </button>
-              </div>
-
-              {recipientType === 'specific' && (
-                <select
-                  value={recipientId}
-                  onChange={(e) => setRecipientId(e.target.value)}
-                  className="form-select"
-                  required
-                >
-                  <option value="">Sélectionner un médecin...</option>
-                  {doctors.map(doc => (
-                    <option key={doc.id} value={doc.id}>
-                      Dr. {doc.last_name || doc.username} ({doc.specialty || 'Généraliste'})
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
+            {recipientType === 'specific' && (
+              <select
+                value={recipientId}
+                onChange={(e) => setRecipientId(e.target.value)}
+                className="form-select"
+                required
+              >
+                <option value="">Sélectionner un médecin...</option>
+                {doctors.map(doc => (
+                  <option key={doc.id} value={doc.id}>
+                    Dr. {doc.last_name || doc.username} ({doc.specialty || 'Généraliste'})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="form-group">
