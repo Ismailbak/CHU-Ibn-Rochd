@@ -5,6 +5,7 @@ import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonChart, SkeletonListItem } from '../../components/common';
 import { getDashboardSummary, getRecentActivity } from '../../api/api';
+import { getWelcomeDisplayName, isAdminWelcome } from '../../utils/userGreeting';
 import './DashboardPage.css';
 
 const diagnosisColors = [
@@ -45,10 +46,8 @@ function timeAgo(isoString) {
 
 function DashboardPage() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const userName =
-    user.specialty === 'medecine-interne' && (user.last_name || user.lastName)
-      ? `Dr. ${user.last_name || user.lastName}`
-      : user.username || user.name || user.email || 'Docteur';
+  const userName = getWelcomeDisplayName(user);
+  const adminWelcome = isAdminWelcome(user);
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
     totalPatients: 0,
@@ -114,7 +113,13 @@ function DashboardPage() {
         {/* Welcome Section */}
         <div className="dashboard-grid">
           <div className="welcome-section">
-            <p className="welcome-subtitle">Bonjour, <strong>{userName}</strong> - Bienvenue</p>
+            <p className="welcome-subtitle">
+              {adminWelcome ? (
+                <>Bonjour <strong>{userName}</strong></>
+              ) : (
+                <>Bonjour, <strong>{userName}</strong> - Bienvenue</>
+              )}
+            </p>
             <h1 className="welcome-title">Tableau de Bord</h1>
             <p className="welcome-text">
               <span className="status-icon"> </span> Vue d'ensemble de votre activité

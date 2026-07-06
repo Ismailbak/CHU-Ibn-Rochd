@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
   FiMail, FiLock, FiEye, FiEyeOff, FiActivity, 
@@ -6,6 +6,7 @@ import {
 } from 'react-icons/fi';
 import api from '../../api/api';
 import { specialtyToRole } from '../../utils/permissions';
+import { LegalAcceptanceModal } from '../Legal';
 import '../Login/LoginPage.css';
 import './SignupPage.css';
 
@@ -24,9 +25,26 @@ function SignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
+  const [legalModal, setLegalModal] = useState(null);
   const [step, setStep] = useState(1);
+  const legalPromptedRef = useRef(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (step !== 2) {
+      legalPromptedRef.current = false;
+      return;
+    }
+    if (legalPromptedRef.current) return;
+    legalPromptedRef.current = true;
+    if (!acceptedTerms) {
+      setLegalModal('terms');
+    } else if (!acceptedPrivacy) {
+      setLegalModal('privacy');
+    }
+  }, [step, acceptedTerms, acceptedPrivacy]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -55,8 +73,10 @@ function SignupPage() {
       setError('Les mots de passe ne correspondent pas');
       return false;
     }
-    if (!acceptTerms) {
-      setError('Veuillez accepter les conditions d\'utilisation');
+    if (!acceptedTerms || !acceptedPrivacy) {
+      setError('Veuillez lire et approuver les conditions d\'utilisation et la politique de confidentialité');
+      if (!acceptedTerms) setLegalModal('terms');
+      else setLegalModal('privacy');
       return false;
     }
     setError('');
@@ -119,54 +139,30 @@ function SignupPage() {
 
   const passwordStrength = getPasswordStrength();
 
-  // Modal state for terms/privacy
-  const [modalContent, setModalContent] = useState({ open: false, type: null });
+  const handleLegalApprove = () => {
+    if (legalModal === 'terms') {
+      setAcceptedTerms(true);
+      setLegalModal(acceptedPrivacy ? null : 'privacy');
+      return;
+    }
+    if (legalModal === 'privacy') {
+      setAcceptedPrivacy(true);
+      setLegalModal(null);
+    }
+  };
 
-  // Dummy content for terms/privacy (replace with actual content or fetch)
-  const termsContent = (
-    <div>
-      <h3>Conditions d'utilisation</h3>
-      <p>Bienvenue sur RhumatoAI. En utilisant cette plateforme, vous acceptez de respecter les règles et conditions suivantes...</p>
-      <ul>
-        <li>Utilisation professionnelle uniquement.</li>
-        <li>Respect de la confidentialité des données patients.</li>
-        <li>Interdiction de partage non autorisé.</li>
-      </ul>
-    </div>
-  );
-  const privacyContent = (
-    <div>
-      <h3>Politique de confidentialité</h3>
-      <p>Vos données sont protégées et utilisées uniquement dans le cadre de votre activité médicale sur RhumatoAI...</p>
-      <ul>
-        <li>Stockage sécurisé et crypté.</li>
-        <li>Aucune revente de données.</li>
-        <li>Accès limité aux membres autorisés.</li>
-      </ul>
-    </div>
-  );
-
-  // Modal card for terms/privacy
-  const renderModalCard = () => {
-    if (!modalContent.open) return null;
-    return (
-      <div className="modal-overlay" onClick={() => setModalContent({ open: false, type: null })}>
-        <div className="modal-content" onClick={e => e.stopPropagation()}>
-          <div className="modal-header">
-            <h2>{modalContent.type === 'terms' ? "Conditions d'utilisation" : "Politique de confidentialité"}</h2>
-            <button className="modal-close" onClick={() => setModalContent({ open: false, type: null })}>×</button>
-          </div>
-          <div className="modal-body">
-            {modalContent.type === 'terms' ? termsContent : privacyContent}
-          </div>
-        </div>
-      </div>
-    );
+  const openLegalModal = (type) => {
+    setLegalModal(type);
   };
 
   return (
     <div className="auth-container signup-container">
-      {renderModalCard()}
+      <LegalAcceptanceModal
+        isOpen={Boolean(legalModal)}
+        type={legalModal}
+        onApprove={handleLegalApprove}
+        onClose={() => setLegalModal(null)}
+      />
       {/* Left Side - Branding */}
       <div className="auth-branding">
         <div className="branding-content">
@@ -423,17 +419,35 @@ function SignupPage() {
                   )}
                 </div>
 
-                <label className="terms-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={acceptTerms}
-                    onChange={(e) => setAcceptTerms(e.target.checked)}
-                  />
-                  <span className="checkmark"></span>
-                  J'accepte les{' '}
-                  <a href="#" onClick={e => { e.preventDefault(); setModalContent({ open: true, type: 'terms' }); }}>conditions d'utilisation</a>{' '}et la{' '}
-                  <a href="#" onClick={e => { e.preventDefault(); setModalContent({ open: true, type: 'privacy' }); }}>politique de confidentialité</a>
-                </label>
+                <div className="legal-acceptance-block">
+                  <p className="legal-acceptance-intro">
+                    Avant de créer votre compte, lisez et approuvez les documents suivants :
+                  </p>
+                  <div className={`legal-acceptance-row ${acceptedTerms ? 'is-approved' : ''}`}>
+                    <span>Conditions d&apos;utilisation</span>
+                    {acceptedTerms ? (
+                      <span className="legal-approved-badge">
+                        <FiCheckCircle /> Approuvé
+                      </span>
+                    ) : (
+                      <button type="button" className="legal-read-btn" onClick={() => openLegalModal('terms')}>
+                        Lire et approuver
+                      </button>
+                    )}
+                  </div>
+                  <div className={`legal-acceptance-row ${acceptedPrivacy ? 'is-approved' : ''}`}>
+                    <span>Politique de confidentialité</span>
+                    {acceptedPrivacy ? (
+                      <span className="legal-approved-badge">
+                        <FiCheckCircle /> Approuvé
+                      </span>
+                    ) : (
+                      <button type="button" className="legal-read-btn" onClick={() => openLegalModal('privacy')}>
+                        Lire et approuver
+                      </button>
+                    )}
+                  </div>
+                </div>
 
                 <div className="form-buttons">
                   <button 
@@ -446,7 +460,7 @@ function SignupPage() {
                   <button 
                     type="submit" 
                     className={`submit-btn ${isLoading ? 'loading' : ''}`}
-                    disabled={isLoading}
+                    disabled={isLoading || !acceptedTerms || !acceptedPrivacy}
                   >
                     {isLoading ? (
                       <span className="spinner"></span>

@@ -14,6 +14,7 @@ from app.models.notification import Notification as NotificationModel
 from app.models.user import User
 from datetime import datetime, timedelta
 from app.auth.router import get_current_user_orm, RoleChecker, require_admin
+from app.auth.permissions import ROLES_DASHBOARD
 from app.analytics import service as analytics_service
 import csv
 import io
@@ -116,7 +117,7 @@ def get_summary(
 @router.get("/dashboard-summary")
 def get_dashboard_summary(
     db: Session = Depends(get_db),
-    current_user: User = Depends(RoleChecker(["admin", "doctor", "department_head"])),
+    current_user: User = Depends(RoleChecker(list(ROLES_DASHBOARD))),
 ):
     today = datetime.now().date()
     week_start = today - timedelta(days=6)

@@ -187,6 +187,74 @@
   text-decoration: underline;
 }
 
+.legal-acceptance-block {
+  margin-top: 8px;
+  padding: 16px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+}
+
+.legal-acceptance-intro {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #64748B;
+}
+
+.legal-acceptance-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid #E2E8F0;
+  font-size: 14px;
+  color: #374151;
+}
+
+.legal-acceptance-row:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.legal-acceptance-row.is-approved span:first-child {
+  color: #059669;
+  font-weight: 500;
+}
+
+.legal-read-btn {
+  padding: 8px 14px;
+  border: 1px solid #BFDBFE;
+  border-radius: 10px;
+  background: #EFF6FF;
+  color: #1D4ED8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.legal-read-btn:hover {
+  background: #DBEAFE;
+  border-color: #93C5FD;
+}
+
+.legal-approved-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #059669;
+  white-space: nowrap;
+}
+
+.legal-approved-badge svg {
+  font-size: 16px;
+}
+
 /* Form Buttons */
 .form-buttons {
   display: flex;

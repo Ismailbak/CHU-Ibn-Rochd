@@ -5,12 +5,13 @@ import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { FiUsers, FiBarChart2, FiShield, FiSettings, FiLogIn, FiUserPlus, FiEdit2, FiTrash2, FiCalendar, FiFileText } from 'react-icons/fi';
 import { getAdminStats, getAuditLogs } from '../../api/api';
+import { getWelcomeDisplayName } from '../../utils/userGreeting';
 import './AdminDashboard.css';
 
 function AdminDashboard() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const adminName = user.first_name || user.name || 'Admin';
+  const adminName = getWelcomeDisplayName(user);
 
   const [stats, setStats] = useState(null);
   const [recentActivity, setRecentActivity] = useState([]);
@@ -88,7 +89,7 @@ function AdminDashboard() {
         {/* Welcome Section */}
         <div className="dashboard-grid">
           <div className="welcome-section">
-            <p className="welcome-subtitle">Bonjour, <strong>{adminName}</strong> - Bienvenue</p>
+            <p className="welcome-subtitle">Bonjour <strong>{adminName}</strong></p>
             <h1 className="welcome-title">Tableau de Bord Admin</h1>
             <p className="welcome-text">
               <span className="status-icon"> </span> Gestion de la plateforme et des utilisateurs

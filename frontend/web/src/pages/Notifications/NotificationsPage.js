@@ -7,6 +7,7 @@ import {
 import Layout from '../../components/layout/Layout';
 import { SkeletonListItem, useToast } from '../../components/common';
 import { getNotifications, markNotificationRead as apiMarkRead } from '../../api/api';
+import { canSendNotifications } from '../../utils/permissions';
 import CreateNotificationModal from './CreateNotificationModal';
 import './NotificationsPage.css';
 
@@ -45,6 +46,8 @@ function mapApiNotification(n) {
 const notificationFilters = ['Toutes', 'Non lues', 'RDV', 'Patients', 'Résultats', 'Messages'];
 
 function NotificationsPage() {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const maySendNotifications = canSendNotifications(user);
   const [notifications, setNotifications] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('Toutes');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -152,10 +155,12 @@ function NotificationsPage() {
             <p className="page-subtitle">Messages et alertes du staff médical</p>
           </div>
           <div className="header-actions">
-            <button className="new-notif-btn" onClick={() => setShowCreateModal(true)}>
-              <FiMessageSquare />
-              <span>Nouvelle Notification</span>
-            </button>
+            {maySendNotifications && (
+              <button className="new-notif-btn" onClick={() => setShowCreateModal(true)}>
+                <FiMessageSquare />
+                <span>Nouvelle Notification</span>
+              </button>
+            )}
             <button className="mark-all-btn" onClick={markAllAsRead} disabled={unreadCount === 0}>
               <FiCheck />
               <span>Marquer tout lu</span>

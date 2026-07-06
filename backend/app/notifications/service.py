@@ -28,7 +28,7 @@ def send_manual_notification(
 ) -> List[NotificationModel]:
     """
     Sends a notification to all doctors (public) or one recipient (private).
-    Non-doctor senders (admin, department_head) get an inbox copy for public broadcasts.
+    Non-doctor senders (admin, department_head, nurse, …) get an inbox copy for public broadcasts.
     """
     created_notifications = []
 
@@ -48,7 +48,7 @@ def send_manual_notification(
             db.add(notif)
             created_notifications.append(notif)
 
-        # Admin / department_head are not in the doctors list but should see what they sent
+        # Non-doctor senders are not in the doctors list but should see what they sent
         if sender_id not in recipient_ids:
             notif = NotificationModel(
                 user_id=sender_id,

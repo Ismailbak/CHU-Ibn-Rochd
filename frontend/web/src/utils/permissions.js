@@ -18,6 +18,11 @@ export function canDeleteClinicalRecords(user = getStoredUser()) {
   return user?.role !== ROLE_NURSE;
 }
 
+export function canSendNotifications(user = getStoredUser()) {
+  if (user?.is_admin) return true;
+  return ['doctor', 'admin', 'department_head', ROLE_NURSE].includes(user?.role);
+}
+
 export function specialtyToRole(specialty) {
   if (specialty === ROLE_NURSE) return ROLE_NURSE;
   return 'doctor';

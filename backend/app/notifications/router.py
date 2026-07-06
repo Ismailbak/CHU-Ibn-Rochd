@@ -7,9 +7,17 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.user import User
 from app.auth.router import get_current_user_orm, RoleChecker
+from app.auth.permissions import can_send_notifications
 from app.notifications import service as notification_service
 
 router = APIRouter()
+
+
+def _format_sender_name(sender: User) -> str:
+    if sender.role == "doctor" and sender.last_name:
+        return f"Dr. {sender.last_name}"
+    full_name = " ".join(part for part in (sender.first_name, sender.last_name) if part).strip()
+    return full_name or sender.username
 
 
 def _serialize_notification(db: Session, row) -> dict:
@@ -17,7 +25,7 @@ def _serialize_notification(db: Session, row) -> dict:
     if row.sender_id:
         sender = db.query(User).filter(User.id == row.sender_id).first()
         if sender:
-            sender_name = f"Dr. {sender.last_name}" if sender.last_name else sender.username
+            sender_name = _format_sender_name(sender)
 
     return {
         "id": row.id,
@@ -70,10 +78,12 @@ def send_notification(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_orm),
 ):
-    # Only allow doctors or admins to send manual notifications
-    if current_user.role not in ["doctor", "admin", "department_head"]:
-        raise HTTPException(status_code=403, detail="Only medical staff can send notifications")
-    
+    # Medical staff (doctors, nurses, admins, department heads) may send notifications.
+    if not can_send_notifications(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="Vous n'avez pas la permission d'envoyer des notifications.",
+        )
     try:
         new_notifs = notification_service.send_manual_notification(
             db,

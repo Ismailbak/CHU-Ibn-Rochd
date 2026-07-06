@@ -7,6 +7,8 @@ from app.models.user import User
 
 ROLE_NURSE = "infirmier"
 ROLES_CAN_DELETE_CLINICAL = frozenset({"admin", "doctor", "department_head"})
+ROLES_DASHBOARD = frozenset({"admin", "doctor", "department_head", ROLE_NURSE})
+ROLES_CAN_SEND_NOTIFICATIONS = frozenset({"admin", "doctor", "department_head", ROLE_NURSE})
 
 
 def is_nurse(user: User) -> bool:
@@ -18,6 +20,12 @@ def can_delete_clinical_records(user: User) -> bool:
     if user.is_admin:
         return True
     return user.role in ROLES_CAN_DELETE_CLINICAL
+
+
+def can_send_notifications(user: User) -> bool:
+    if user.is_admin:
+        return True
+    return user.role in ROLES_CAN_SEND_NOTIFICATIONS
 
 
 def require_clinical_delete(user: User = Depends(get_current_user_orm)) -> User:
