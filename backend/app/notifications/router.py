@@ -62,6 +62,7 @@ class NotificationCreate(BaseModel):
     title: str
     message: str
     is_public: bool = False
+    audience: Optional[str] = None  # all | doctors | nurses | specific
     category: str = "message"
 
 
@@ -87,14 +88,20 @@ def send_notification(
             detail="Vous n'avez pas la permission d'envoyer des notifications.",
         )
     try:
+        audience = data.audience
+        if not audience and data.is_public:
+            audience = "doctors"
+        if not audience:
+            audience = "specific" if data.recipient_id else "doctors"
+
         new_notifs = notification_service.send_manual_notification(
             db,
             sender_id=current_user.id,
             recipient_id=data.recipient_id,
             title=data.title.strip(),
             message=data.message.strip(),
-            is_public=data.is_public,
             category=data.category,
+            audience=audience,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

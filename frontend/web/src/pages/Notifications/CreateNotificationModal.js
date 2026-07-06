@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { FiX, FiSend, FiUser, FiUsers, FiInfo } from 'react-icons/fi';
 import { getNotificationRecipients, createNotification, formatApiError } from '../../api/api';
 import './CreateNotificationModal.css';
@@ -17,10 +17,17 @@ function formatRecipientLabel(person) {
   return `${person.first_name || ''} ${lastName}`.trim() || person.username;
 }
 
+const RECIPIENT_OPTIONS = [
+  { id: 'all', label: 'Tous', icon: FiUsers },
+  { id: 'doctors', label: 'Tous les médecins', icon: FiUsers },
+  { id: 'nurses', label: 'Tous les infirmiers', icon: FiUsers },
+  { id: 'specific', label: 'Destinataire précis', icon: FiUser },
+];
+
 const CreateNotificationModal = ({ isOpen, onClose, onCreated, onError }) => {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
-  const [recipientType, setRecipientType] = useState('all');
+  const [recipientType, setRecipientType] = useState('doctors');
   const [recipientId, setRecipientId] = useState('');
   const [category, setCategory] = useState('message');
   const [recipients, setRecipients] = useState([]);
@@ -28,6 +35,12 @@ const CreateNotificationModal = ({ isOpen, onClose, onCreated, onError }) => {
   const [error, setError] = useState('');
   const titleRef = useRef(null);
   const MAX_MESSAGE = 1000;
+
+  const groupedRecipients = useMemo(() => ({
+    doctors: recipients.filter((p) => p.role === 'doctor' || p.role === 'medecin'),
+    nurses: recipients.filter((p) => p.role === 'infirmier'),
+    others: recipients.filter((p) => !['doctor', 'medecin', 'infirmier'].includes(p.role)),
+  }), [recipients]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -61,7 +74,7 @@ const CreateNotificationModal = ({ isOpen, onClose, onCreated, onError }) => {
       const res = await createNotification({
         title: title.trim(),
         message: message.trim(),
-        is_public: recipientType === 'all',
+        audience: recipientType,
         recipient_id: recipientType === 'specific' ? parseInt(recipientId, 10) : null,
         category,
       });
@@ -78,7 +91,7 @@ const CreateNotificationModal = ({ isOpen, onClose, onCreated, onError }) => {
       setTitle('');
       setMessage('');
       setRecipientId('');
-      setRecipientType('all');
+      setRecipientType('doctors');
       setCategory('message');
     } catch (err) {
       const msg = formatApiError(err, 'Une erreur est survenue lors de l\'envoi.');
@@ -135,25 +148,19 @@ const CreateNotificationModal = ({ isOpen, onClose, onCreated, onError }) => {
 
           <div className="cnm-field">
             <label className="cnm-label">Destinataire</label>
-            <div className="cnm-segments cnm-segments-2" role="tablist" aria-label="Destinataire">
-              <button
-                type="button"
-                className={`cnm-segment ${recipientType === 'all' ? 'active' : ''}`}
-                onClick={() => setRecipientType('all')}
-                aria-pressed={recipientType === 'all'}
-              >
-                <FiUsers aria-hidden="true" />
-                <span>Tous les médecins</span>
-              </button>
-              <button
-                type="button"
-                className={`cnm-segment ${recipientType === 'specific' ? 'active' : ''}`}
-                onClick={() => setRecipientType('specific')}
-                aria-pressed={recipientType === 'specific'}
-              >
-                <FiUser aria-hidden="true" />
-                <span>Destinataire précis</span>
-              </button>
+            <div className="cnm-segments cnm-segments-4" role="tablist" aria-label="Destinataire">
+              {RECIPIENT_OPTIONS.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={`cnm-segment ${recipientType === id ? 'active' : ''}`}
+                  onClick={() => setRecipientType(id)}
+                  aria-pressed={recipientType === id}
+                >
+                  <Icon aria-hidden="true" />
+                  <span>{label}</span>
+                </button>
+              ))}
             </div>
 
             {recipientType === 'specific' && (
@@ -164,11 +171,33 @@ const CreateNotificationModal = ({ isOpen, onClose, onCreated, onError }) => {
                 required
               >
                 <option value="">Sélectionner un destinataire...</option>
-                {recipients.map((person) => (
-                  <option key={person.id} value={person.id}>
-                    {formatRecipientLabel(person)}
-                  </option>
-                ))}
+                {groupedRecipients.doctors.length > 0 && (
+                  <optgroup label="Médecins">
+                    {groupedRecipients.doctors.map((person) => (
+                      <option key={person.id} value={person.id}>
+                        {formatRecipientLabel(person)}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {groupedRecipients.nurses.length > 0 && (
+                  <optgroup label="Infirmiers">
+                    {groupedRecipients.nurses.map((person) => (
+                      <option key={person.id} value={person.id}>
+                        {formatRecipientLabel(person)}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {groupedRecipients.others.length > 0 && (
+                  <optgroup label="Administration">
+                    {groupedRecipients.others.map((person) => (
+                      <option key={person.id} value={person.id}>
+                        {formatRecipientLabel(person)}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             )}
           </div>
@@ -205,8 +234,8 @@ const CreateNotificationModal = ({ isOpen, onClose, onCreated, onError }) => {
           <div className="cnm-info">
             <FiInfo />
             <span>
-              Les notifications publiques sont adressées à tous les médecins. Les envois
-              précis créent une copie dans votre fil « Envoyées ».
+              « Tous » envoie au staff médical complet. Les envois précis créent une copie
+              dans votre fil « Envoyées ».
             </span>
           </div>
 

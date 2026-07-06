@@ -27,10 +27,11 @@ function mapApiNotification(n, currentUserId) {
     icon = 'message';
   }
 
-  const userId = n.user_id;
-  const senderId = n.sender_id;
-  const isSent = userId === currentUserId && senderId === currentUserId;
-  const isReceived = userId === currentUserId && senderId !== currentUserId;
+  const uid = Number(currentUserId);
+  const userId = n.user_id != null ? Number(n.user_id) : null;
+  const senderId = n.sender_id != null ? Number(n.sender_id) : null;
+  const isSent = userId === uid && senderId === uid;
+  const isReceived = userId === uid && senderId !== uid;
 
   return {
     id: n.id,
@@ -52,7 +53,7 @@ function mapApiNotification(n, currentUserId) {
   };
 }
 
-const notificationFilters = ['Toutes', 'Reçues', 'Envoyées', 'Non lues', 'RDV', 'Patients', 'Résultats', 'Messages'];
+const notificationFilters = ['Toutes', 'Envoyées', 'Non lues', 'RDV', 'Patients', 'Résultats', 'Messages'];
 
 function formatGroupDate(isoDate) {
   const today = new Date().toISOString().split('T')[0];
@@ -93,23 +94,33 @@ function NotificationsPage() {
 
   const filteredNotifications = notifications.filter(notif => {
     switch(selectedFilter) {
-      case 'Reçues': return notif.isReceived;
       case 'Envoyées': return notif.isSent;
       case 'Non lues': return !notif.isRead && notif.isReceived;
-      case 'RDV': return notif.type === 'appointment' || notif.category === 'appointment';
-      case 'Patients': return notif.type === 'new_patient' || notif.category === 'patients';
-      case 'Résultats': return notif.type === 'lab_results' || notif.category === 'results';
-      case 'Messages': return notif.category === 'message';
-      default: return true;
+      case 'RDV': return notif.isReceived && (notif.type === 'appointment' || notif.category === 'appointment');
+      case 'Patients': return notif.isReceived && (notif.type === 'new_patient' || notif.category === 'patients');
+      case 'Résultats': return notif.isReceived && (notif.type === 'lab_results' || notif.category === 'results');
+      case 'Messages': return notif.isReceived && notif.category === 'message';
+      default: return notif.isReceived && !notif.isSent;
     }
   });
 
   const markAsRead = async (id) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+    );
     try {
       await apiMarkRead(id);
-      setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n));
     } catch {
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: false } : n))
+      );
       toast.error('Erreur');
+    }
+  };
+
+  const handleNotificationClick = (notification) => {
+    if (!notification.isRead) {
+      markAsRead(notification.id);
     }
   };
 
@@ -241,7 +252,7 @@ function NotificationsPage() {
                     <div 
                       key={notification.id} 
                       className={`notification-item ${!notification.isRead && notification.isReceived ? 'unread' : ''} ${notification.isSent ? 'sent' : ''} ${getPriorityClass(notification.priority)}`}
-                      onClick={() => notification.isReceived && markAsRead(notification.id)}
+                      onClick={() => handleNotificationClick(notification)}
                     >
                       <div className={`notification-icon ${getTypeClass(notification.type)}`}>
                         {getIcon(notification.icon)}

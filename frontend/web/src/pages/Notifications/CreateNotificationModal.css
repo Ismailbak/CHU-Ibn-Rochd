@@ -131,6 +131,18 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.cnm-segments-4 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cnm-segments-4 .cnm-segment {
+  height: auto;
+  min-height: 42px;
+  padding: 8px 10px;
+  white-space: normal;
+  text-align: center;
+}
+
 .cnm-segments-2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -309,6 +321,7 @@
   }
 
   .cnm-segments-3,
+  .cnm-segments-4,
   .cnm-segments-2 {
     grid-template-columns: 1fr;
   }
