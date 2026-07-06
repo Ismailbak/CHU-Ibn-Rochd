@@ -54,10 +54,10 @@ else
   fail "Frontend build missing cnm-segment — run npm run build"
 fi
 
-if grep -rl 'handleSuggestionClick' "$REPO/frontend/web/build/static/js/"*.js >/dev/null 2>&1; then
+if grep -rl 'Résume le dossier médical de' "$REPO/frontend/web/build/static/js/"*.js >/dev/null 2>&1; then
   pass "Frontend build contains chat suggestion templates"
 else
-  fail "Frontend build missing handleSuggestionClick — run npm run build"
+  fail "Frontend build missing chat suggestions — run: cd frontend/web && npm run build"
 fi
 
 # 4. Auth + API flows
