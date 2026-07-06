@@ -29,6 +29,20 @@ const diagnosisColors = [
   '#6B7280',
 ];
 
+const PERIOD_LABELS = {
+  '7days': '7 derniers jours',
+  '30days': '30 derniers jours',
+  '3months': '3 derniers mois',
+  '6months': '6 derniers mois',
+  '1year': 'Cette année',
+};
+
+// Report theme (hospital-grade: single navy accent, grey text)
+const PDF_NAVY = [30, 58, 138];
+const PDF_TEXT = [55, 65, 81];
+const PDF_ZEBRA = [248, 250, 252];
+const PDF_TOTAL_BG = [226, 232, 240];
+
 function AnalyticsPage() {
   const [dateRange, setDateRange] = useState('6months');
   const [activeTab, setActiveTab] = useState('overview');
@@ -74,210 +88,373 @@ function AnalyticsPage() {
   const activityTrendData = summary?.activity_trends ?? [];
   const topTreatmentsData = summary?.treatments ?? [];
 
-  const handleExportPDF = () => {
-    if (!summary) return;
+  const periodLabel = PERIOD_LABELS[dateRange] || dateRange;
 
+  const buildPdfReport = (reportTitle) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    let yPosition = 15;
-    const margin = 15;
+    const margin = 16;
+    const contentWidth = pageWidth - 2 * margin;
+    const HEADER_H = 24;
+    const FOOTER_H = 18;
+    const generatedAt = new Date().toLocaleDateString('fr-FR', {
+      year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
 
-    // Helper function to add a table
-    const addTable = (columns, data, startY, headerColor) => {
-      const colWidth = (pageWidth - 2 * margin) / columns.length;
-      let y = startY;
+    let y = HEADER_H + 12;
 
-      // Header
-      doc.setFillColor(...headerColor);
-      doc.setTextColor(255);
-      doc.setFont(undefined, 'bold');
-      doc.setFontSize(10);
-
-      columns.forEach((col, i) => {
-        doc.rect(margin + i * colWidth, y, colWidth, 8, 'F');
-        doc.text(col, margin + i * colWidth + 2, y + 6, { maxWidth: colWidth - 4 });
-      });
-
-      y += 8;
-
-      // Body
-      doc.setTextColor(0);
-      doc.setFont(undefined, 'normal');
-      doc.setFontSize(9);
-
-      data.forEach((row, rowIndex) => {
-        if (y > pageHeight - 20) {
-          doc.addPage();
-          y = 15;
-        }
-
-        const rowHeight = 7;
-        if (rowIndex % 2 === 0) {
-          doc.setFillColor(245, 245, 245);
-          doc.rect(margin, y, pageWidth - 2 * margin, rowHeight, 'F');
-        }
-
-        row.forEach((cell, i) => {
-          doc.text(String(cell), margin + i * colWidth + 2, y + 5.5, { maxWidth: colWidth - 4 });
-        });
-
-        y += rowHeight;
-      });
-
-      return y + 5;
+    const ensureSpace = (needed) => {
+      if (y + needed > pageHeight - FOOTER_H) {
+        doc.addPage();
+        y = HEADER_H + 12;
+      }
     };
 
-    // ===== PAGE 1: COVER PAGE & SUMMARY =====
-    doc.setFontSize(24);
+    // columns: [{ label, weight, align }]
+    const addTable = (columns, rows, { totalsRow = null } = {}) => {
+      const totalWeight = columns.reduce((s, c) => s + (c.weight || 1), 0);
+      const widths = columns.map(c => ((c.weight || 1) / totalWeight) * contentWidth);
+      const xs = widths.reduce((acc, w, i) => { acc.push(i === 0 ? margin : acc[i - 1] + widths[i - 1]); return acc; }, []);
+      const ROW_H = 7.5;
+
+      const cellText = (value, colIdx, yy) => {
+        const col = columns[colIdx];
+        const pad = 3;
+        const x = col.align === 'right' ? xs[colIdx] + widths[colIdx] - pad : xs[colIdx] + pad;
+        doc.text(String(value ?? ''), x, yy, {
+          align: col.align === 'right' ? 'right' : 'left',
+          maxWidth: widths[colIdx] - 2 * pad,
+        });
+      };
+
+      const drawHeader = () => {
+        doc.setFillColor(...PDF_NAVY);
+        doc.rect(margin, y, contentWidth, ROW_H + 0.5, 'F');
+        doc.setTextColor(255);
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(8.5);
+        columns.forEach((c, i) => cellText(c.label, i, y + 5.3));
+        y += ROW_H + 0.5;
+      };
+
+      ensureSpace(ROW_H * 3);
+      drawHeader();
+
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(9);
+      rows.forEach((row, rowIdx) => {
+        if (y + ROW_H > pageHeight - FOOTER_H) {
+          doc.addPage();
+          y = HEADER_H + 12;
+          drawHeader();
+          doc.setFont(undefined, 'normal');
+          doc.setFontSize(9);
+        }
+        if (rowIdx % 2 === 1) {
+          doc.setFillColor(...PDF_ZEBRA);
+          doc.rect(margin, y, contentWidth, ROW_H, 'F');
+        }
+        doc.setTextColor(...PDF_TEXT);
+        row.forEach((cell, i) => cellText(cell, i, y + 5.2));
+        // thin row separator
+        doc.setDrawColor(229, 231, 235);
+        doc.setLineWidth(0.1);
+        doc.line(margin, y + ROW_H, margin + contentWidth, y + ROW_H);
+        y += ROW_H;
+      });
+
+      if (totalsRow) {
+        ensureSpace(ROW_H);
+        doc.setFillColor(...PDF_TOTAL_BG);
+        doc.rect(margin, y, contentWidth, ROW_H, 'F');
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(...PDF_NAVY);
+        totalsRow.forEach((cell, i) => cellText(cell, i, y + 5.2));
+        doc.setFont(undefined, 'normal');
+        y += ROW_H;
+      }
+
+      // table outer border
+      doc.setDrawColor(...PDF_NAVY);
+      doc.setLineWidth(0.2);
+      y += 2;
+    };
+
+    const addSectionTitle = (num, title, note) => {
+      ensureSpace(20);
+      y += 6;
+      doc.setFillColor(...PDF_NAVY);
+      doc.rect(margin, y - 4.5, 1.8, 6.5, 'F');
+      doc.setFont(undefined, 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(...PDF_NAVY);
+      doc.text(`${num}. ${title}`, margin + 5, y);
+      if (note) {
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(120);
+        doc.text(note, margin + 5, y + 5);
+        y += 5;
+      }
+      y += 7;
+    };
+
+    const pct = (count, total) => (total > 0 ? `${((count / total) * 100).toFixed(1)} %` : '—');
+    const fmtInt = (n) => Number(n || 0).toLocaleString('fr-FR');
+
+    // ===== Cover block =====
     doc.setFont(undefined, 'bold');
-    doc.text('Rapports & Analytiques', pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 15;
-
-    doc.setFontSize(12);
+    doc.setFontSize(20);
+    doc.setTextColor(...PDF_NAVY);
+    doc.text(reportTitle, margin, y);
+    y += 8;
     doc.setFont(undefined, 'normal');
-    doc.setTextColor(100);
-    doc.text(`Analyses détaillées de votre activité médicale`, pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 12;
+    doc.setFontSize(10.5);
+    doc.setTextColor(...PDF_TEXT);
+    doc.text('Rapport statistique du service de rhumatologie', margin, y);
+    y += 9;
 
+    // Metadata box
+    doc.setDrawColor(203, 213, 225);
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(margin, y, contentWidth, 22, 1.5, 1.5, 'FD');
+    doc.setFontSize(9);
+    const metaCol2 = margin + contentWidth / 2;
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(...PDF_NAVY);
+    doc.text('Période analysée', margin + 5, y + 7);
+    doc.text('Date de génération', metaCol2, y + 7);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(...PDF_TEXT);
+    doc.text(periodLabel, margin + 5, y + 13);
+    doc.text(generatedAt, metaCol2, y + 13);
+    doc.setFontSize(7.5);
     doc.setTextColor(150);
-    doc.setFontSize(10);
-    doc.text(`Période: ${dateRange}`, pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 3;
-    doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`, pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 15;
+    doc.text('Document confidentiel — réservé à un usage interne', margin + 5, y + 19);
+    y += 30;
 
-    // Summary Stats Box
-    doc.setDrawColor(52, 182, 244);
-    doc.setFillColor(219, 239, 255);
-    doc.rect(margin, yPosition, pageWidth - 2 * margin, 45, 'FD');
+    // ===== 1. Synthèse =====
+    addSectionTitle(1, 'SYNTHÈSE GÉNÉRALE');
+    const weekTotalRdv = weeklyAppointmentsData.reduce((s, d) => s + (d.total ?? 0), 0);
+    addTable(
+      [
+        { label: 'Indicateur', weight: 3 },
+        { label: 'Valeur', weight: 1.2, align: 'right' },
+      ],
+      [
+        ['Patients enregistrés', fmtInt(totalPatients)],
+        ['Âge moyen des patients', avgAge ? `${Number(avgAge).toFixed(1)} ans` : '—'],
+        ['Diagnostics distincts (top 5 affichés)', fmtInt(commonDiagnoses.length)],
+        ['Rendez-vous de la semaine en cours', fmtInt(weekTotalRdv)],
+      ]
+    );
 
-    doc.setTextColor(0);
-    doc.setFontSize(11);
-    doc.setFont(undefined, 'bold');
-    doc.text('Statistiques Principales', margin + 5, yPosition + 7);
-
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'normal');
-    yPosition += 13;
-    doc.text(`• Patients traités: ${totalPatients}`, margin + 10, yPosition);
-    yPosition += 6;
-    doc.text(`• Âge moyen: ${avgAge.toFixed(1)} ans`, margin + 10, yPosition);
-    yPosition += 6;
-    doc.text(`• Diagnostics courants: ${commonDiagnoses.length}`, margin + 10, yPosition);
-    yPosition += 15;
-
-    // ===== SECTION 1: DIAGNOSTICS =====
-    yPosition += 5;
-    doc.setFontSize(13);
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(52, 182, 244);
-    doc.text('1. RÉPARTITION DES DIAGNOSTICS', margin, yPosition);
-    yPosition += 8;
-
+    // ===== 2. Diagnostics =====
     if (commonDiagnoses.length > 0) {
-      const diagnosisData = commonDiagnoses.map((diag, index) => [String(index + 1), diag.name, String(diag.count)]);
-      yPosition = addTable(['#', 'Diagnostic', 'Nombre'], diagnosisData, yPosition, [52, 182, 244]);
+      const diagTotal = commonDiagnoses.reduce((s, d) => s + (d.count || 0), 0);
+      addSectionTitle(2, 'RÉPARTITION DES DIAGNOSTICS', 'Top 5 des diagnostics les plus fréquents — ensemble de la base patients');
+      addTable(
+        [
+          { label: '#', weight: 0.5 },
+          { label: 'Diagnostic', weight: 3.5 },
+          { label: 'Nombre de cas', weight: 1.3, align: 'right' },
+          { label: 'Part (%)', weight: 1, align: 'right' },
+        ],
+        commonDiagnoses.map((d, i) => [String(i + 1), d.name, fmtInt(d.count), pct(d.count, diagTotal)]),
+        { totalsRow: ['', 'Total', fmtInt(diagTotal), '100 %'] }
+      );
     }
 
-    // ===== SECTION 2: TREATMENTS =====
-    yPosition += 3;
-    doc.setFontSize(13);
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(16, 185, 129);
-    doc.text('2. TRAITEMENTS LES PLUS PRESCRITS', margin, yPosition);
-    yPosition += 8;
-
+    // ===== 3. Traitements =====
     if (topTreatmentsData.length > 0) {
-      const treatmentData = topTreatmentsData.slice(0, 10).map((treatment, index) => [
-        String(index + 1),
-        treatment.treatment,
-        String(treatment.count || 0)
-      ]);
-      yPosition = addTable(['Rang', 'Traitement', 'Nombre'], treatmentData, yPosition, [16, 185, 129]);
+      const treatTotal = topTreatmentsData.reduce((s, t) => s + (t.count || 0), 0);
+      addSectionTitle(3, 'TRAITEMENTS LES PLUS PRESCRITS', `Période : ${periodLabel}`);
+      addTable(
+        [
+          { label: 'Rang', weight: 0.6 },
+          { label: 'Traitement', weight: 3.4 },
+          { label: 'Prescriptions', weight: 1.3, align: 'right' },
+          { label: 'Part (%)', weight: 1, align: 'right' },
+        ],
+        topTreatmentsData.slice(0, 10).map((t, i) => [String(i + 1), t.treatment, fmtInt(t.count), pct(t.count, treatTotal)]),
+        { totalsRow: ['', 'Total', fmtInt(treatTotal), '100 %'] }
+      );
     }
 
-    // ===== PAGE 2: ACTIVITY =====
+    // ===== 4. Activité =====
     if (activityTrendData.length > 0) {
-      doc.addPage();
-      yPosition = 15;
-
-      doc.setFontSize(13);
-      doc.setFont(undefined, 'bold');
-      doc.setTextColor(139, 92, 246);
-      doc.text('3. TENDANCE D\'ACTIVITÉ (Derniers 12 mois)', margin, yPosition);
-      yPosition += 8;
-
-      const activityData = activityTrendData.slice(0, 12).map(item => [
-        item.period || 'N/A',
-        String(item.count || 0)
-      ]);
-      yPosition = addTable(['Période', 'Activité'], activityData, yPosition, [139, 92, 246]);
+      const actTotal = activityTrendData.reduce((s, a) => s + (a.count || 0), 0);
+      addSectionTitle(4, "TENDANCE D'ACTIVITÉ", `Volume de rendez-vous par période — ${periodLabel}`);
+      addTable(
+        [
+          { label: 'Période', weight: 2 },
+          { label: 'Rendez-vous', weight: 1.3, align: 'right' },
+          { label: 'Part (%)', weight: 1, align: 'right' },
+        ],
+        activityTrendData.slice(0, 12).map(a => [a.period || '—', fmtInt(a.count), pct(a.count || 0, actTotal)]),
+        { totalsRow: ['Total', fmtInt(actTotal), '100 %'] }
+      );
     }
 
-    // ===== PAGE 3: DEMOGRAPHICS =====
-    if (ageDistributionData.length > 0 || weeklyAppointmentsData.length > 0) {
-      doc.addPage();
-      yPosition = 15;
-
-      doc.setFontSize(13);
-      doc.setFont(undefined, 'bold');
-      doc.setTextColor(236, 72, 153);
-      doc.text('5. DÉMOGRAPHIE DES PATIENTS', margin, yPosition);
-      yPosition += 8;
-
-      if (ageDistributionData.length > 0) {
-        const demoData = ageDistributionData.map(item => [
-          item.age || 'N/A',
-          String(item.male || 0),
-          String(item.female || 0)
-        ]);
-        yPosition = addTable(['Groupe d\'âge', 'Hommes', 'Femmes'], demoData, yPosition, [236, 72, 153]);
-      }
-
-      // Weekly Appointments
-      yPosition += 3;
-      doc.setFontSize(13);
-      doc.setFont(undefined, 'bold');
-      doc.setTextColor(75, 85, 99);
-      doc.text('6. RENDEZ-VOUS PAR JOUR (Cette semaine)', margin, yPosition);
-      yPosition += 8;
-
-      if (weeklyAppointmentsData.length > 0) {
-        const weeklyData = weeklyAppointmentsData.map(item => [
-          item.day || 'N/A',
-          String(item.consultations || 0),
-          String(item.suivis || 0),
-          String(item.urgences || 0),
-          String(item.autres || 0),
-          String(item.total || 0),
-        ]);
-        yPosition = addTable(['Jour', 'Consultations', 'Suivis', 'Urgences', 'Autres', 'Total'], weeklyData, yPosition, [75, 85, 99]);
-      }
+    // ===== 5. Démographie =====
+    if (ageDistributionData.length > 0) {
+      addSectionTitle(5, 'DÉMOGRAPHIE DES PATIENTS', 'Distribution par tranche d\'âge et par sexe');
+      const demoTotals = ageDistributionData.reduce(
+        (acc, r) => ({ m: acc.m + (r.male || 0), f: acc.f + (r.female || 0) }),
+        { m: 0, f: 0 }
+      );
+      addTable(
+        [
+          { label: 'Tranche d\'âge', weight: 1.6 },
+          { label: 'Hommes', weight: 1, align: 'right' },
+          { label: 'Femmes', weight: 1, align: 'right' },
+          { label: 'Total', weight: 1, align: 'right' },
+        ],
+        ageDistributionData.map(r => [
+          r.age || '—', fmtInt(r.male), fmtInt(r.female), fmtInt((r.male || 0) + (r.female || 0)),
+        ]),
+        { totalsRow: ['Total', fmtInt(demoTotals.m), fmtInt(demoTotals.f), fmtInt(demoTotals.m + demoTotals.f)] }
+      );
     }
 
-    // ===== FOOTER ON ALL PAGES =====
+    // ===== 6. Rendez-vous de la semaine =====
+    if (weeklyAppointmentsData.length > 0) {
+      addSectionTitle(6, 'RENDEZ-VOUS DE LA SEMAINE EN COURS', 'Répartition journalière par motif');
+      const wTotals = weeklyAppointmentsData.reduce(
+        (acc, d) => ({
+          c: acc.c + (d.consultations || 0),
+          s: acc.s + (d.suivis || 0),
+          u: acc.u + (d.urgences || 0),
+          a: acc.a + (d.autres || 0),
+          t: acc.t + (d.total ?? 0),
+        }),
+        { c: 0, s: 0, u: 0, a: 0, t: 0 }
+      );
+      addTable(
+        [
+          { label: 'Jour', weight: 1 },
+          { label: 'Consultations', weight: 1.2, align: 'right' },
+          { label: 'Suivis', weight: 1, align: 'right' },
+          { label: 'Urgences', weight: 1, align: 'right' },
+          { label: 'Autres', weight: 1, align: 'right' },
+          { label: 'Total', weight: 1, align: 'right' },
+        ],
+        weeklyAppointmentsData.map(d => [
+          d.day || '—', fmtInt(d.consultations), fmtInt(d.suivis), fmtInt(d.urgences), fmtInt(d.autres), fmtInt(d.total),
+        ]),
+        { totalsRow: ['Total', fmtInt(wTotals.c), fmtInt(wTotals.s), fmtInt(wTotals.u), fmtInt(wTotals.a), fmtInt(wTotals.t)] }
+      );
+    }
+
+    // ===== Header & footer on every page =====
     const pageCount = doc.internal.pages.length - 1;
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
+
+      // Header band
+      doc.setFillColor(...PDF_NAVY);
+      doc.rect(0, 0, pageWidth, HEADER_H - 8, 'F');
+      doc.setTextColor(255);
+      doc.setFont(undefined, 'bold');
+      doc.setFontSize(11);
+      doc.text('RhumatoAI', margin, 10.5);
+      doc.setFont(undefined, 'normal');
       doc.setFontSize(8);
-      doc.setTextColor(150);
-      
-      // Page number
-      doc.text(`Page ${i} sur ${pageCount}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
-      
-      // Footer line
-      doc.setDrawColor(200);
-      doc.line(margin, pageHeight - 12, pageWidth - margin, pageHeight - 12);
-      
-      // Footer text
-      doc.setFontSize(7);
-      doc.text('Médical AI - Rapport Généré Automatiquement', margin, pageHeight - 5);
-      doc.text(`© ${new Date().getFullYear()} - Tous droits réservés`, pageWidth - margin, pageHeight - 5, { align: 'right' });
+      doc.text('Service de Rhumatologie — Rapport statistique', pageWidth - margin, 10.5, { align: 'right' });
+      doc.setDrawColor(...PDF_NAVY);
+      doc.setLineWidth(0.4);
+      doc.line(margin, HEADER_H - 5, pageWidth - margin, HEADER_H - 5);
+
+      // Footer
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.2);
+      doc.line(margin, pageHeight - FOOTER_H + 6, pageWidth - margin, pageHeight - FOOTER_H + 6);
+      doc.setFontSize(7.5);
+      doc.setTextColor(130);
+      doc.text('RhumatoAI — Document confidentiel, usage interne uniquement', margin, pageHeight - 7);
+      doc.text(`Généré le ${generatedAt}`, pageWidth / 2, pageHeight - 7, { align: 'center' });
+      doc.text(`Page ${i} / ${pageCount}`, pageWidth - margin, pageHeight - 7, { align: 'right' });
     }
 
-    // Save PDF
-    doc.save(`Rapport_Analytiques_${new Date().toISOString().split('T')[0]}.pdf`);
+    return doc;
+  };
+
+  const handleExportPDF = () => {
+    if (!summary) return;
+    const doc = buildPdfReport('Rapport d\'Activité Médicale');
+    doc.save(`RhumatoAI_Rapport_${dateRange}_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  const handleExportMonthlyPDF = () => {
+    if (!summary) return;
+    const doc = buildPdfReport('Rapport Mensuel d\'Activité');
+    doc.save(`RhumatoAI_Rapport_Mensuel_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  // CSV with UTF-8 BOM + semicolons so Excel (FR locale) opens it correctly
+  const downloadCSV = (filename, sections) => {
+    const lines = [];
+    sections.forEach(({ title, headers, rows }, idx) => {
+      if (idx > 0) lines.push('');
+      lines.push(title);
+      lines.push(headers.join(';'));
+      rows.forEach(r => lines.push(r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')));
+    });
+    const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportPatientsCSV = () => {
+    if (!summary) return;
+    downloadCSV(`RhumatoAI_Statistiques_Patients_${new Date().toISOString().split('T')[0]}.csv`, [
+      {
+        title: `Statistiques Patients — ${periodLabel}`,
+        headers: ['Indicateur', 'Valeur'],
+        rows: [
+          ['Patients enregistrés', totalPatients],
+          ['Âge moyen', avgAge ? `${Number(avgAge).toFixed(1)} ans` : ''],
+        ],
+      },
+      {
+        title: 'Démographie (par tranche d\'âge)',
+        headers: ['Tranche d\'âge', 'Hommes', 'Femmes', 'Total'],
+        rows: ageDistributionData.map(r => [r.age, r.male || 0, r.female || 0, (r.male || 0) + (r.female || 0)]),
+      },
+      {
+        title: 'Top diagnostics',
+        headers: ['Rang', 'Diagnostic', 'Nombre de cas'],
+        rows: commonDiagnoses.map((d, i) => [i + 1, d.name, d.count]),
+      },
+    ]);
+  };
+
+  const handleExportActivityCSV = () => {
+    if (!summary) return;
+    downloadCSV(`RhumatoAI_Activite_Detaillee_${new Date().toISOString().split('T')[0]}.csv`, [
+      {
+        title: `Tendance d'activité — ${periodLabel}`,
+        headers: ['Période', 'Rendez-vous'],
+        rows: activityTrendData.map(a => [a.period, a.count || 0]),
+      },
+      {
+        title: 'Rendez-vous de la semaine en cours',
+        headers: ['Jour', 'Consultations', 'Suivis', 'Urgences', 'Autres', 'Total'],
+        rows: weeklyAppointmentsData.map(d => [
+          d.day, d.consultations || 0, d.suivis || 0, d.urgences || 0, d.autres || 0, d.total ?? 0,
+        ]),
+      },
+      {
+        title: `Traitements les plus prescrits — ${periodLabel}`,
+        headers: ['Rang', 'Traitement', 'Prescriptions'],
+        rows: topTreatmentsData.map((t, i) => [i + 1, t.treatment, t.count || 0]),
+      },
+    ]);
   };
 
   return (
@@ -623,21 +800,22 @@ function AnalyticsPage() {
         {/* Export Section */}
         <div className="export-section">
           <h3>Exporter les Rapports</h3>
+          <p className="export-subtitle">Documents générés à partir des données de la période sélectionnée ({periodLabel})</p>
           <div className="export-options">
-            <button className="export-option">
+            <button className="export-option" onClick={handleExportMonthlyPDF} disabled={!summary}>
               <FiFileText />
               <span>Rapport Mensuel</span>
               <small>PDF</small>
             </button>
-            <button className="export-option">
+            <button className="export-option" onClick={handleExportPatientsCSV} disabled={!summary}>
               <FiBarChart2 />
               <span>Statistiques Patients</span>
-              <small>Excel</small>
+              <small>Excel (CSV)</small>
             </button>
-            <button className="export-option">
+            <button className="export-option" onClick={handleExportActivityCSV} disabled={!summary}>
               <FiActivity />
               <span>Activité Détaillée</span>
-              <small>Excel</small>
+              <small>Excel (CSV)</small>
             </button>
           </div>
         </div>

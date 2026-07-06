@@ -378,12 +378,18 @@
   font-size: 18px;
   font-weight: 600;
   color: #1E2A4A;
+  margin: 0 0 6px 0;
+}
+
+.export-subtitle {
+  font-size: 13px;
+  color: #6B7280;
   margin: 0 0 20px 0;
 }
 
 .export-options {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 15px;
 }
 
@@ -403,6 +409,11 @@
 .export-option:hover {
   background: #EEF2FF;
   border-color: #3B82F6;
+}
+
+.export-option:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .export-option svg {
