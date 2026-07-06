@@ -12,6 +12,7 @@ import os
 import shutil
 from pathlib import Path
 from app.models.user import User
+from app.auth.permissions import is_nurse, ROLE_NURSE
 from app.auth.deletion import delete_user_cascade
 from app.models.audit import AuditLog
 from app.auth.service import (
@@ -247,7 +248,7 @@ def list_notification_recipients(
             "last_name": u.last_name,
             "specialty": u.specialty,
             "username": u.username,
-            "role": u.role,
+            "role": ROLE_NURSE if is_nurse(u) else u.role,
         }
         for u in staff
     ]

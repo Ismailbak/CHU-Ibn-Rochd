@@ -12,7 +12,11 @@ ROLES_CAN_SEND_NOTIFICATIONS = frozenset({"admin", "doctor", "department_head", 
 
 
 def is_nurse(user: User) -> bool:
-    return (user.role or "").lower() == ROLE_NURSE and not user.is_admin
+    if user.is_admin:
+        return False
+    role = (user.role or "").lower()
+    specialty = (getattr(user, "specialty", None) or "").lower()
+    return role == ROLE_NURSE or specialty == ROLE_NURSE
 
 
 def can_delete_clinical_records(user: User) -> bool:

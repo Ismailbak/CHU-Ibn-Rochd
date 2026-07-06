@@ -1,7 +1,9 @@
 from typing import List, Optional
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from app.models.notification import Notification as NotificationModel
 from app.models.user import User as UserModel
+from app.auth.permissions import ROLE_NURSE
 
 STAFF_ROLES = ("doctor", "infirmier", "admin", "department_head")
 
@@ -100,7 +102,13 @@ def send_manual_notification(
     elif audience == "nurses":
         nurses = (
             db.query(UserModel)
-            .filter(UserModel.role == "infirmier", UserModel.is_active == True)
+            .filter(
+                UserModel.is_active == True,
+                or_(
+                    UserModel.role == ROLE_NURSE,
+                    UserModel.specialty == ROLE_NURSE,
+                ),
+            )
             .all()
         )
         created_notifications = _broadcast_notification(

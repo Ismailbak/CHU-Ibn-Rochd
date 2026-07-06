@@ -19,6 +19,7 @@ def test_is_nurse():
     assert is_nurse(_user(ROLE_NURSE)) is True
     assert is_nurse(_user("doctor")) is False
     assert is_nurse(_user(ROLE_NURSE, is_admin=True)) is False
+    assert is_nurse(SimpleNamespace(role="doctor", is_admin=False, specialty=ROLE_NURSE)) is True
 
 
 def test_can_delete_clinical_records():
