@@ -49,12 +49,12 @@ function TermsPage() {
           </p>
           <ul>
             <li>
-              Ismail Bakraoui —{' '}
-              <a href="mailto:ismail.bakraoui0@gmail.com">ismail.bakraoui0@gmail.com</a>
-            </li>
-            <li>
               Samy Housbane —{' '}
               <a href="mailto:s.housbane@gmail.com">s.housbane@gmail.com</a>
+            </li>
+            <li>
+              Ismail Bakraoui —{' '}
+              <a href="mailto:ismail.bakraoui0@gmail.com">ismail.bakraoui0@gmail.com</a>
             </li>
           </ul>
           <p>
@@ -196,12 +196,12 @@ function TermsPage() {
           </p>
           <ul>
             <li>
-              Ismail Bakraoui —{' '}
-              <a href="mailto:ismail.bakraoui0@gmail.com">ismail.bakraoui0@gmail.com</a>
-            </li>
-            <li>
               Samy Housbane —{' '}
               <a href="mailto:s.housbane@gmail.com">s.housbane@gmail.com</a>
+            </li>
+            <li>
+              Ismail Bakraoui —{' '}
+              <a href="mailto:ismail.bakraoui0@gmail.com">ismail.bakraoui0@gmail.com</a>
             </li>
           </ul>
         </section>
