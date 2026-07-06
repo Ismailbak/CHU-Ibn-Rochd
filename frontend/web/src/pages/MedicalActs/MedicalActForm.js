@@ -3,7 +3,7 @@ import { FixedSizeList as List } from 'react-window';
 import {
   FiUser, FiCalendar, FiActivity, FiCheck, FiX,
   FiChevronRight, FiChevronLeft, FiSearch, FiAlertCircle, FiPlus,
-  FiImage, FiZap, FiTarget, FiDollarSign, FiClock, FiEdit3, FiCheckCircle
+  FiImage, FiZap, FiTarget, FiClock, FiEdit3, FiCheckCircle
 } from 'react-icons/fi';
 import { useToast } from '../../components/common';
 import {
@@ -48,7 +48,7 @@ const STEPS = [
   { id: 3, label: 'Données', icon: FiTarget },
   { id: 4, label: 'Clinique', icon: FiActivity },
   { id: 5, label: 'Labo', icon: FiTarget },
-  { id: 6, label: 'Facturation', icon: FiDollarSign },
+  { id: 6, label: 'Traitements', icon: FiEdit3 },
 ];
 
 // Form component mapping
@@ -102,7 +102,7 @@ const EMPTY_FORM = {
   diagnosis: '',
   report: '',
   amount: '',
-  status: 'pending',
+  status: 'completed',
   treatment: [],
   notes: '',
   labResults: [],
@@ -528,11 +528,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit, defaultPatien
       // Lab results step is optional
     }
     if (s === 6) {
-      // Billing - require amount only when actually submitting
-      const amountValue = String(form.amount || '').trim();
-      if (!amountValue) {
-        newErrors.amount = 'Le montant est requis';
-      }
+      // Treatments step is optional
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -1183,62 +1179,12 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit, defaultPatien
           </div>
         )}
 
-        {/* Step 6 — Billing */}
+        {/* Step 6 — Treatments */}
         {step === 6 && (
           <div className="maf-section">
             <div className="maf-section-title">
-              <FiDollarSign className="maf-section-icon" />
-              <span>Facturation & Finalisation</span>
-            </div>
-
-            <div className="maf-grid-2">
-              {/* Amount */}
-              <div className="maf-field">
-                <label className="maf-label">
-                  Montant (DH) <span className="maf-required">*</span>
-                </label>
-                <div className="maf-input-icon-wrapper">
-                  <FiDollarSign className="maf-input-icon" />
-                  <input
-                    type="number"
-                    name="amount"
-                    className={`maf-input maf-input-with-icon ${errors.amount ? 'maf-input-error' : ''}`}
-                    placeholder="0.00"
-                    value={form.amount}
-                    onChange={handleChange}
-                  />
-                </div>
-                {errors.amount && <span className="maf-error-msg"><FiAlertCircle />{errors.amount}</span>}
-              </div>
-
-              {/* Status */}
-              <div className="maf-field">
-                <label className="maf-label">Statut</label>
-                <div className="maf-status-group">
-                  <label className={`maf-status-chip completed ${form.status === 'completed' ? 'selected' : ''}`}>
-                    <input
-                      type="radio"
-                      name="status"
-                      value="completed"
-                      checked={form.status === 'completed'}
-                      onChange={handleChange}
-                      hidden
-                    />
-                    <FiCheck /> Terminé
-                  </label>
-                  <label className={`maf-status-chip pending ${form.status === 'pending' ? 'selected' : ''}`}>
-                    <input
-                      type="radio"
-                      name="status"
-                      value="pending"
-                      checked={form.status === 'pending'}
-                      onChange={handleChange}
-                      hidden
-                    />
-                    <FiClock /> En cours
-                  </label>
-                </div>
-              </div>
+              <FiEdit3 className="maf-section-icon" />
+              <span>Traitements</span>
             </div>
 
             <TreatmentPrescriptionPanel
