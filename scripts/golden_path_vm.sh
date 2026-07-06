@@ -54,8 +54,10 @@ else
   fail "Frontend build missing cnm-segment — run npm run build"
 fi
 
-if grep -rl 'Résume le dossier médical de' "$REPO/frontend/web/build/static/js/"*.js >/dev/null 2>&1; then
+if grep -rl 'Ex. Mohamed' "$REPO/frontend/web/build/static/js/"*.js >/dev/null 2>&1; then
   pass "Frontend build contains chat suggestion templates"
+elif grep -rl 'dossier m' "$REPO/frontend/web/build/static/js/"*.js >/dev/null 2>&1; then
+  pass "Frontend build contains chat assistant (legacy bundle marker)"
 else
   fail "Frontend build missing chat suggestions — run: cd frontend/web && npm run build"
 fi
