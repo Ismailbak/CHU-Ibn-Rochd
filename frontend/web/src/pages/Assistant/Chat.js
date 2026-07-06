@@ -55,26 +55,26 @@ const suggestions = [
   {
     icon: FiFileText,
     title: 'Résumer un dossier',
-    description: 'Résume le dossier médical de Mohamed Alami',
-    prompt: 'Résume le dossier médical de Mohamed Alami',
+    description: 'Ex. Mohamed Alami',
+    template: 'Résume le dossier médical de ',
   },
   {
     icon: FiActivity,
     title: 'Suggérer un traitement',
-    description: 'Quels traitements recommanderais-tu pour une polyarthrite rhumatoïde modérée ?',
-    prompt: 'Quels traitements recommanderais-tu pour une polyarthrite rhumatoïde modérée ?',
+    description: 'Ex. une polyarthrite rhumatoïde modérée',
+    template: 'Quels traitements recommanderais-tu pour ',
   },
   {
     icon: FiCalendar,
     title: 'Planifier un suivi',
-    description: 'Quand devrais-je revoir un patient sous Méthotrexate ?',
-    prompt: 'Quand devrais-je revoir un patient sous Méthotrexate ?',
+    description: 'Ex. un patient sous Méthotrexate',
+    template: 'Quand devrais-je revoir ',
   },
   {
     icon: FiTarget,
     title: 'Aide au diagnostic',
-    description: 'Patient avec douleurs articulaires symétriques et raideur matinale, quels examens ?',
-    prompt: 'Patient avec douleurs articulaires symétriques et raideur matinale, quels examens ?',
+    description: 'Ex. douleurs articulaires symétriques et raideur matinale',
+    template: 'Patient avec ',
   },
 ];
 
@@ -417,6 +417,17 @@ function Chat({ patientId, currentUser }) {
 
   const handleSend = () => internalHandleSend(input, attachment);
 
+  const handleSuggestionClick = (template) => {
+    setInput(template);
+    setTimeout(() => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+      textarea.focus();
+      const pos = template.length;
+      textarea.setSelectionRange(pos, pos);
+    }, 0);
+  };
+
   const handleRetryFailed = (promptText, msgId) => {
     setMessages(prev => prev.filter(m => m.id !== msgId));
     internalHandleSend(promptText);
@@ -619,8 +630,8 @@ function Chat({ patientId, currentUser }) {
             <div className="assistant-welcome">
               <p className="assistant-suggestion-kicker">Essayez une de ces suggestions :</p>
               <div className="assistant-suggestion-grid">
-                {suggestions.map(({ icon: Icon, title, description, prompt }) => (
-                  <button key={title} onClick={() => internalHandleSend(prompt)}>
+                {suggestions.map(({ icon: Icon, title, description, template }) => (
+                  <button key={title} type="button" onClick={() => handleSuggestionClick(template)}>
                     <span className="suggestion-icon"><Icon /></span>
                     <strong>{title}</strong>
                     <small>{description}</small>
