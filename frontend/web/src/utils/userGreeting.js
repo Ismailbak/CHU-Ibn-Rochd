@@ -17,7 +17,7 @@ export function getWelcomeDisplayName(user = {}) {
     return 'Admin';
   }
 
-  if (user.role === ROLE_NURSE) {
+  if (user.role === ROLE_NURSE || user.specialty === ROLE_NURSE) {
     const lastName = getLastName(user);
     if (lastName) {
       return `${getCivilTitle(user)} ${lastName}`;
@@ -30,6 +30,41 @@ export function getWelcomeDisplayName(user = {}) {
   }
 
   return user.username || user.name || user.email || 'Docteur';
+}
+
+/** Profile header name (Mon Profil, avatar area). */
+export function getProfileDisplayName(user = {}) {
+  if (user.is_admin || user.role === 'admin') {
+    return 'Admin';
+  }
+
+  if (user.role === ROLE_NURSE || user.specialty === ROLE_NURSE) {
+    const lastName = getLastName(user);
+    if (lastName) {
+      return `${getCivilTitle(user)} ${lastName}`;
+    }
+    return user.first_name || user.firstName || user.username || 'Infirmier(ère)';
+  }
+
+  const lastName = getLastName(user);
+  if (lastName && (user.role === 'doctor' || user.role === 'medecin' || user.specialty)) {
+    return `Dr. ${lastName}`;
+  }
+
+  if (user.specialty === 'medecine-interne' && lastName) {
+    return `Dr. ${lastName}`;
+  }
+
+  return user.first_name || user.firstName || user.username || user.email || 'Utilisateur';
+}
+
+/** Short badge on profile avatar (Dr, Inf, Adm). */
+export function getProfileBadge(user = {}) {
+  if (user.is_admin || user.role === 'admin') return 'Adm';
+  if (user.role === ROLE_NURSE || user.specialty === ROLE_NURSE) return 'Inf';
+  if (user.role === 'doctor' || user.role === 'medecin') return 'Dr';
+  if (user.specialty && user.specialty !== ROLE_NURSE) return 'Dr';
+  return null;
 }
 
 /** Whether the short admin greeting is used (no "- Bienvenue" suffix). */

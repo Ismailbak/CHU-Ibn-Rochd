@@ -252,6 +252,7 @@ export const exportAuditLogsCsv = (filters = {}) => {
 export const getAdminStats = () => api.get('/analytics/admin-stats');
 export const getAdminUsers = () => api.get('/auth/users');
 export const getDoctors = () => api.get('/auth/doctors');
+export const getNotificationRecipients = () => api.get('/auth/notification-recipients');
 export const toggleUserStatus = (userId) => api.patch(`/auth/users/${userId}/toggle`);
 export const createUser = (data) => api.post('/auth/signup', data);
 export const updateUser = (userId, data) => api.put(`/auth/users/${userId}`, data);

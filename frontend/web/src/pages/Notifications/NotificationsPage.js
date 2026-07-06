@@ -11,7 +11,7 @@ import { canSendNotifications } from '../../utils/permissions';
 import CreateNotificationModal from './CreateNotificationModal';
 import './NotificationsPage.css';
 
-function mapApiNotification(n) {
+function mapApiNotification(n, currentUserId) {
   const category = n.category || 'message';
   let type = category;
   let icon = 'bell';
@@ -27,15 +27,24 @@ function mapApiNotification(n) {
     icon = 'message';
   }
 
+  const userId = n.user_id;
+  const senderId = n.sender_id;
+  const isSent = userId === currentUserId && senderId === currentUserId;
+  const isReceived = userId === currentUserId && senderId !== currentUserId;
+
   return {
     id: n.id,
+    userId,
+    senderId,
+    isSent,
+    isReceived,
     type: type,
     category: category,
     title: n.title,
     message: n.message,
     isRead: n.read,
     isPublic: n.is_public,
-    senderName: n.sender_name || 'Système',
+    senderName: isSent ? 'Moi' : (n.sender_name || 'Système'),
     icon: icon,
     date: n.created_at ? n.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
     time: n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
@@ -43,10 +52,19 @@ function mapApiNotification(n) {
   };
 }
 
-const notificationFilters = ['Toutes', 'Non lues', 'RDV', 'Patients', 'Résultats', 'Messages'];
+const notificationFilters = ['Toutes', 'Reçues', 'Envoyées', 'Non lues', 'RDV', 'Patients', 'Résultats', 'Messages'];
+
+function formatGroupDate(isoDate) {
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  if (isoDate === today) return "Aujourd'hui";
+  if (isoDate === yesterday) return 'Hier';
+  return isoDate;
+}
 
 function NotificationsPage() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUserId = user.id;
   const maySendNotifications = canSendNotifications(user);
   const [notifications, setNotifications] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('Toutes');
@@ -59,7 +77,7 @@ function NotificationsPage() {
     setIsLoading(true);
     getNotifications()
       .then(res => {
-        setNotifications((res.data || []).map(mapApiNotification));
+        setNotifications((res.data || []).map((n) => mapApiNotification(n, currentUserId)));
       })
       .catch(() => { setNotifications([]); })
       .finally(() => { setIsLoading(false); });
@@ -70,11 +88,14 @@ function NotificationsPage() {
   }, []);
 
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const unreadCount = notifications.filter(n => !n.isRead && n.isReceived).length;
+  const sentCount = notifications.filter(n => n.isSent).length;
 
   const filteredNotifications = notifications.filter(notif => {
     switch(selectedFilter) {
-      case 'Non lues': return !notif.isRead;
+      case 'Reçues': return notif.isReceived;
+      case 'Envoyées': return notif.isSent;
+      case 'Non lues': return !notif.isRead && notif.isReceived;
       case 'RDV': return notif.type === 'appointment' || notif.category === 'appointment';
       case 'Patients': return notif.type === 'new_patient' || notif.category === 'patients';
       case 'Résultats': return notif.type === 'lab_results' || notif.category === 'results';
@@ -92,9 +113,18 @@ function NotificationsPage() {
     }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, isRead: true })));
-    toast.success('Toutes les notifications marquées comme lues');
+  const markAllAsRead = async () => {
+    const unreadReceived = notifications.filter((n) => !n.isRead && n.isReceived);
+    if (unreadReceived.length === 0) return;
+    try {
+      await Promise.all(unreadReceived.map((n) => apiMarkRead(n.id)));
+      setNotifications(notifications.map((n) =>
+        n.isReceived ? { ...n, isRead: true } : n
+      ));
+      toast.success('Toutes les notifications reçues marquées comme lues');
+    } catch {
+      toast.error('Erreur lors du marquage');
+    }
   };
 
   const deleteNotification = (id) => {
@@ -110,7 +140,6 @@ function NotificationsPage() {
       case 'alert': return <FiAlertCircle />;
       case 'check': return <FiCheckCircle />;
       case 'activity': return <FiActivity />;
-      case 'heart': return <FiHeart />;
       case 'message': return <FiMessageSquare />;
       default: return <FiBell />;
     }
@@ -135,8 +164,7 @@ function NotificationsPage() {
 
   // Group notifications by date
   const groupedNotifications = filteredNotifications.reduce((groups, notif) => {
-    const date = notif.date === '2026-02-05' ? 'Aujourd\'hui' : 
-                 notif.date === '2026-02-04' ? 'Hier' : notif.date;
+    const date = formatGroupDate(notif.date);
     if (!groups[date]) groups[date] = [];
     groups[date].push(notif);
     return groups;
@@ -180,6 +208,9 @@ function NotificationsPage() {
               {filter === 'Non lues' && unreadCount > 0 && (
                 <span className="filter-count">{unreadCount}</span>
               )}
+              {filter === 'Envoyées' && sentCount > 0 && (
+                <span className="filter-count">{sentCount}</span>
+              )}
             </button>
           ))}
         </div>
@@ -209,8 +240,8 @@ function NotificationsPage() {
                   {notifs.map(notification => (
                     <div 
                       key={notification.id} 
-                      className={`notification-item ${!notification.isRead ? 'unread' : ''} ${getPriorityClass(notification.priority)}`}
-                      onClick={() => markAsRead(notification.id)}
+                      className={`notification-item ${!notification.isRead && notification.isReceived ? 'unread' : ''} ${notification.isSent ? 'sent' : ''} ${getPriorityClass(notification.priority)}`}
+                      onClick={() => notification.isReceived && markAsRead(notification.id)}
                     >
                       <div className={`notification-icon ${getTypeClass(notification.type)}`}>
                         {getIcon(notification.icon)}
@@ -221,6 +252,7 @@ function NotificationsPage() {
                           <h4 className="notification-title">
                             {notification.title}
                             {notification.isPublic && <span className="public-tag">Staff</span>}
+                            {notification.isSent && <span className="sent-tag">Envoyée</span>}
                           </h4>
                           <span className="notification-time">{notification.time}</span>
                         </div>
@@ -233,7 +265,7 @@ function NotificationsPage() {
                       </div>
 
                       <div className="notification-actions">
-                        {!notification.isRead && (
+                        {!notification.isRead && notification.isReceived && (
                           <div className="unread-dot" title="Non lu"></div>
                         )}
                         <button 

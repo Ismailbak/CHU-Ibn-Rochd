@@ -11,6 +11,8 @@ import {
   uploadProfilePicture,
   getUploadsUrl,
 } from '../../api/api';
+import { getProfileDisplayName, getProfileBadge } from '../../utils/userGreeting';
+import { ROLE_NURSE } from '../../utils/permissions';
 import './ProfilePage.css';
 
 function ProfilePage() {
@@ -43,6 +45,8 @@ function ProfilePage() {
           specialty: user.specialty || '',
           department: user.department || '',
           hospital: user.hospital || '',
+          role: user.role || '',
+          is_admin: user.is_admin || false,
         });
         
         // Set profile picture if exists
@@ -80,6 +84,29 @@ function ProfilePage() {
     }
     fetchProfileAndActivity();
   }, []);
+
+  const profileDisplayName = profile
+    ? getProfileDisplayName({
+        first_name: profile.firstName,
+        last_name: profile.lastName,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        email: profile.email,
+        specialty: profile.specialty,
+        role: profile.role,
+        is_admin: profile.is_admin,
+      })
+    : '';
+  const profileBadge = profile
+    ? getProfileBadge({
+        specialty: profile.specialty,
+        role: profile.role,
+        is_admin: profile.is_admin,
+      })
+    : null;
+  const specialtyLabel = profile?.specialty === ROLE_NURSE
+    ? 'Infirmier(ère)'
+    : profile?.specialty;
 
   const toast = useToast();
 
@@ -204,7 +231,7 @@ function ProfilePage() {
             <div className="profile-avatar-section">
               <div className="profile-avatar" style={{ backgroundImage: profilePicture ? `url(${profilePicture})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: !profilePicture ? '#1E2A4A' : 'transparent' }}>
                 {!profilePicture && <FiUser style={{ fontSize: '50px', zIndex: 1 }} />}
-                {!profilePicture && <div className="doctor-badge">Dr</div>}
+                {!profilePicture && profileBadge && <div className="doctor-badge">{profileBadge}</div>}
                 <button 
                   className="avatar-edit-btn" 
                   title="Changer la photo"
@@ -224,11 +251,7 @@ function ProfilePage() {
               />
               <div className="profile-info">
                     <h2>
-                      <span>
-                        {profile.specialty
-                          ? `Dr. ${profile.lastName || profile.firstName || profile.email}`
-                          : profile.firstName || profile.email}
-                      </span>
+                      <span>{profileDisplayName}</span>
                     </h2>
                 {profile.phone && (
                   <div className="profile-phone" style={{ marginTop: 4, color: '#6B7280', fontSize: 15 }}>
@@ -237,7 +260,7 @@ function ProfilePage() {
                 )}
                 {profile.specialty && (
                   <div className="profile-specialty" style={{ marginTop: 4, color: '#6B7280', fontSize: 15 }}>
-                    <strong>Spécialité:</strong> {profile.specialty}
+                    <strong>Spécialité:</strong> {specialtyLabel}
                   </div>
                 )}
                 {profile.department && (

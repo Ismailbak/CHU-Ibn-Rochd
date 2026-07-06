@@ -4,10 +4,13 @@ from app.models.notification import Notification as NotificationModel
 from app.models.user import User as UserModel
 
 def get_user_notifications(db: Session, user_id: int) -> List[NotificationModel]:
-    return db.query(NotificationModel).filter(
-        (NotificationModel.user_id == user_id) | 
-        ((NotificationModel.sender_id == user_id) & (NotificationModel.is_public == False))
-    ).order_by(NotificationModel.id.desc()).all()
+    """Return notifications owned by the user (inbox + sent outbox copies)."""
+    return (
+        db.query(NotificationModel)
+        .filter(NotificationModel.user_id == user_id)
+        .order_by(NotificationModel.id.desc())
+        .all()
+    )
 
 def mark_notification_read(db: Session, notification_id: int, user_id: int) -> bool:
     notif = db.query(NotificationModel).filter(NotificationModel.id == notification_id, NotificationModel.user_id == user_id).first()
@@ -71,6 +74,19 @@ def send_manual_notification(
         )
         db.add(notif)
         created_notifications.append(notif)
+
+        if sender_id != recipient_id:
+            sender_copy = NotificationModel(
+                user_id=sender_id,
+                sender_id=sender_id,
+                title=title,
+                message=message,
+                is_public=False,
+                category=category,
+                read=True,
+            )
+            db.add(sender_copy)
+            created_notifications.append(sender_copy)
     else:
         raise ValueError("Destinataire requis pour une notification privée.")
 

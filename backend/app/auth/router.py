@@ -205,7 +205,7 @@ def list_doctors(
     current_user: User = Depends(get_current_user_orm),
 ):
     """Allows any authenticated user to see the list of doctors for peer-to-peer features."""
-    doctors = db.query(User).filter(User.role == "doctor").all()
+    doctors = db.query(User).filter(User.role == "doctor", User.is_active == True).all()
     return [
         {
             "id": d.id,
@@ -213,8 +213,38 @@ def list_doctors(
             "last_name": d.last_name,
             "specialty": d.specialty,
             "username": d.username,
+            "role": d.role,
         }
         for d in doctors
+    ]
+
+
+@router.get("/notification-recipients")
+def list_notification_recipients(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+):
+    """Staff members who can receive a direct notification."""
+    staff = (
+        db.query(User)
+        .filter(
+            User.is_active == True,
+            User.id != current_user.id,
+            User.role.in_(["doctor", "infirmier", "admin", "department_head"]),
+        )
+        .order_by(User.last_name, User.first_name)
+        .all()
+    )
+    return [
+        {
+            "id": u.id,
+            "first_name": u.first_name,
+            "last_name": u.last_name,
+            "specialty": u.specialty,
+            "username": u.username,
+            "role": u.role,
+        }
+        for u in staff
     ]
 
 

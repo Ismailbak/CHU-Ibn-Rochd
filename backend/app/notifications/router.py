@@ -29,6 +29,7 @@ def _serialize_notification(db: Session, row) -> dict:
 
     return {
         "id": row.id,
+        "user_id": row.user_id,
         "title": row.title,
         "message": row.message,
         "read": row.read,
@@ -42,6 +43,7 @@ def _serialize_notification(db: Session, row) -> dict:
 
 class Notification(BaseModel):
     id: int
+    user_id: Optional[int] = None
     title: str
     message: str
     read: bool = False

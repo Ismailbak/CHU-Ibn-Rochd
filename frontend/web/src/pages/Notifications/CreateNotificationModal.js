@@ -1,7 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FiX, FiSend, FiUser, FiUsers, FiInfo } from 'react-icons/fi';
-import { getDoctors, createNotification, formatApiError } from '../../api/api';
+import { getNotificationRecipients, createNotification, formatApiError } from '../../api/api';
 import './CreateNotificationModal.css';
+
+function formatRecipientLabel(person) {
+  const lastName = person.last_name || person.username || 'Utilisateur';
+  if (person.role === 'doctor') {
+    return `Dr. ${lastName}${person.specialty ? ` (${person.specialty})` : ''}`;
+  }
+  if (person.role === 'infirmier') {
+    return `${person.first_name || ''} ${lastName}`.trim() + ' (Infirmier)';
+  }
+  if (person.role === 'admin') {
+    return `${person.first_name || ''} ${lastName}`.trim() + ' (Admin)';
+  }
+  return `${person.first_name || ''} ${lastName}`.trim() || person.username;
+}
 
 const CreateNotificationModal = ({ isOpen, onClose, onCreated, onError }) => {
   const [title, setTitle] = useState('');
@@ -9,26 +23,29 @@ const CreateNotificationModal = ({ isOpen, onClose, onCreated, onError }) => {
   const [recipientType, setRecipientType] = useState('all');
   const [recipientId, setRecipientId] = useState('');
   const [category, setCategory] = useState('message');
-  const [doctors, setDoctors] = useState([]);
+  const [recipients, setRecipients] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const titleRef = useRef(null);
   const MAX_MESSAGE = 1000;
 
   useEffect(() => {
-    if (isOpen) {
-      getDoctors()
-        .then(res => {
-          setDoctors(res.data || []);
-        })
-        .catch(err => console.error('Error fetching doctors:', err));
-      setTimeout(() => titleRef.current?.focus(), 60);
-    }
+    if (!isOpen) return;
+    setError('');
+    getNotificationRecipients()
+      .then((res) => {
+        setRecipients(res.data || []);
+      })
+      .catch(() => {
+        setRecipients([]);
+        setError('Impossible de charger la liste des destinataires.');
+      });
+    setTimeout(() => titleRef.current?.focus(), 60);
   }, [isOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title || !message) {
+    if (!title.trim() || !message.trim()) {
       setError('Veuillez remplir tous les champs obligatoires.');
       return;
     }
@@ -50,13 +67,13 @@ const CreateNotificationModal = ({ isOpen, onClose, onCreated, onError }) => {
       });
 
       if (!res.data?.length) {
-        const msg = 'Aucune notification n\'a pu être créée.';
+        const msg = 'Aucun destinataire disponible pour cette notification.';
         setError(msg);
         onError?.(msg);
         return;
       }
 
-      onCreated(res.data);
+      onCreated?.(res.data);
       onClose();
       setTitle('');
       setMessage('');
@@ -135,7 +152,7 @@ const CreateNotificationModal = ({ isOpen, onClose, onCreated, onError }) => {
                 aria-pressed={recipientType === 'specific'}
               >
                 <FiUser aria-hidden="true" />
-                <span>Médecin spécifique</span>
+                <span>Destinataire précis</span>
               </button>
             </div>
 
@@ -146,10 +163,10 @@ const CreateNotificationModal = ({ isOpen, onClose, onCreated, onError }) => {
                 className="cnm-select"
                 required
               >
-                <option value="">Sélectionner un médecin...</option>
-                {doctors.map(doc => (
-                  <option key={doc.id} value={doc.id}>
-                    Dr. {doc.last_name || doc.username} ({doc.specialty || 'Généraliste'})
+                <option value="">Sélectionner un destinataire...</option>
+                {recipients.map((person) => (
+                  <option key={person.id} value={person.id}>
+                    {formatRecipientLabel(person)}
                   </option>
                 ))}
               </select>
@@ -187,7 +204,10 @@ const CreateNotificationModal = ({ isOpen, onClose, onCreated, onError }) => {
 
           <div className="cnm-info">
             <FiInfo />
-            <span>Les notifications publiques seront visibles par l&apos;ensemble du staff médical.</span>
+            <span>
+              Les notifications publiques sont adressées à tous les médecins. Les envois
+              précis créent une copie dans votre fil « Envoyées ».
+            </span>
           </div>
 
           <div className="cnm-footer">
