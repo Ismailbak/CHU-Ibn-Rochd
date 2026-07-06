@@ -14,6 +14,7 @@ from app.core.schemas.rag_response import ChatRequest as RAGChatRequest, Grounde
 from app.models.llm import llm
 from app.models.chat_message import ChatMessage
 from app.models.user import User
+from app.auth.user_display import assistant_address_instruction
 from app.patients.service import PatientService
 
 logger = logging.getLogger(__name__)
@@ -137,6 +138,10 @@ async def get_grounded_chat_response(
         }
 
         system_msg = system_messages.get(language, system_messages["fr"])
+
+        user = db.query(User).filter(User.id == user_id).first()
+        if user:
+            system_msg += assistant_address_instruction(user, language)
 
         if final_patient_id and rag_response.metadata.confidence == "low":
             name = final_patient_name or f"patient #{final_patient_id}"

@@ -11,6 +11,7 @@ from app.models.chat_message import ChatMessage
 from app.models.chat_session import ChatSession
 from app.models.patient import Patient
 from app.models.user import User
+from app.auth.user_display import assistant_address_instruction
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +78,10 @@ def get_chat_response(
     }
     
     system_msg = system_messages.get(language, system_messages["fr"])
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        system_msg += assistant_address_instruction(user, language)
     
     # Build context
     context = ""

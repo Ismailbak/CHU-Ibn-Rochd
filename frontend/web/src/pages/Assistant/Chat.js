@@ -27,6 +27,7 @@ import {
   FiZap,
 } from 'react-icons/fi';
 import './Chat.css';
+import { getAssistantAddressName } from '../../utils/userGreeting';
 
 const generateId = () => {
   return typeof crypto !== 'undefined' && crypto.randomUUID 
@@ -532,7 +533,7 @@ function Chat({ patientId, currentUser }) {
     return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
   };
 
-  const doctorLabel = ((currentUser?.last_name || currentUser?.username) || 'En ligne');
+  const assistantAddressName = getAssistantAddressName(currentUser || {});
 
   return (
     <div className="assistant-shell">
@@ -556,7 +557,7 @@ function Chat({ patientId, currentUser }) {
         <div className="assistant-history-header">
           <div>
             <p className="assistant-rail-label">Mes conversations</p>
-            <span><FiUser /> {doctorLabel}</span>
+            <span><FiUser /> {assistantAddressName}</span>
           </div>
         </div>
 
@@ -618,7 +619,7 @@ function Chat({ patientId, currentUser }) {
             <p>Posez vos questions médicales</p>
           </div>
           <div className="assistant-header-actions">
-            <span>{doctorLabel}</span>
+            <span>{assistantAddressName}</span>
             <button onClick={handleNewChat} aria-label="Nouvelle conversation">
               <FiRefreshCw />
             </button>
@@ -650,7 +651,7 @@ function Chat({ patientId, currentUser }) {
                     <strong>RhumatoAI</strong>
                     <span>{formatMessageTime(new Date())}</span>
                   </div>
-                  <p>Bonjour Dr. {doctorLabel} ! Je suis votre assistant IA médical. Comment puis-je vous aider aujourd'hui ?</p>
+                  <p>Bonjour {assistantAddressName} ! Je suis votre assistant IA médical. Comment puis-je vous aider aujourd&apos;hui ?</p>
                 </div>
               </div>
             )}

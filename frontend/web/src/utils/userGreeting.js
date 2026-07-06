@@ -67,6 +67,33 @@ export function getProfileBadge(user = {}) {
   return null;
 }
 
+/** How the AI assistant greets the user (Dr. / Inf. / Admin + name). */
+export function getAssistantAddressName(user = {}) {
+  if (user.is_admin || user.role === 'admin') {
+    return 'Admin';
+  }
+
+  if (user.role === ROLE_NURSE || user.specialty === ROLE_NURSE) {
+    const lastName = getLastName(user);
+    if (lastName) return `Inf. ${lastName}`;
+    return user.first_name || user.firstName || user.username || 'Infirmier(ère)';
+  }
+
+  const lastName = getLastName(user);
+  if (lastName && (user.role === 'doctor' || user.role === 'medecin' || user.specialty)) {
+    if (user.specialty === ROLE_NURSE) {
+      return `Inf. ${lastName}`;
+    }
+    return `Dr. ${lastName}`;
+  }
+
+  if (user.specialty === 'medecine-interne' && lastName) {
+    return `Dr. ${lastName}`;
+  }
+
+  return user.first_name || user.firstName || user.username || 'Collègue';
+}
+
 /** Whether the short admin greeting is used (no "- Bienvenue" suffix). */
 export function isAdminWelcome(user = {}) {
   return Boolean(user.is_admin || user.role === 'admin');
