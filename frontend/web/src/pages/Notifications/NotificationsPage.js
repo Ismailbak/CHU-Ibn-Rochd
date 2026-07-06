@@ -8,6 +8,11 @@ import Layout from '../../components/layout/Layout';
 import { SkeletonListItem, useToast } from '../../components/common';
 import { getNotifications, markNotificationRead as apiMarkRead } from '../../api/api';
 import { canSendNotifications } from '../../utils/permissions';
+import {
+  formatMoroccoGroupDate,
+  formatMoroccoTime,
+  getMoroccoDateKey,
+} from '../../utils/dateTime';
 import CreateNotificationModal from './CreateNotificationModal';
 import './NotificationsPage.css';
 
@@ -47,21 +52,13 @@ function mapApiNotification(n, currentUserId) {
     isPublic: n.is_public,
     senderName: isSent ? 'Moi' : (n.sender_name || 'Système'),
     icon: icon,
-    date: n.created_at ? n.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
-    time: n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+    date: n.created_at ? getMoroccoDateKey(n.created_at) : getMoroccoDateKey(new Date()),
+    time: n.created_at ? formatMoroccoTime(n.created_at) : '',
     priority: 'normal',
   };
 }
 
 const notificationFilters = ['Toutes', 'Envoyées', 'Non lues', 'RDV', 'Patients', 'Résultats', 'Messages'];
-
-function formatGroupDate(isoDate) {
-  const today = new Date().toISOString().split('T')[0];
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-  if (isoDate === today) return "Aujourd'hui";
-  if (isoDate === yesterday) return 'Hier';
-  return isoDate;
-}
 
 function NotificationsPage() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -175,7 +172,7 @@ function NotificationsPage() {
 
   // Group notifications by date
   const groupedNotifications = filteredNotifications.reduce((groups, notif) => {
-    const date = formatGroupDate(notif.date);
+    const date = formatMoroccoGroupDate(notif.date);
     if (!groups[date]) groups[date] = [];
     groups[date].push(notif);
     return groups;
