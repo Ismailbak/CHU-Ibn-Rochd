@@ -67,7 +67,7 @@ const CreateNotificationModal = ({ isOpen, onClose, onCreated }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay">
+    <div className="notification-modal-overlay" onClick={onClose}>
       <div className="modal-content notification-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div className="header-title-group">

@@ -1,11 +1,9 @@
-/* Styles for CreateNotificationModal */
-.modal-overlay {
+/* Styles for CreateNotificationModal — aligned with app-wide modal design tokens */
+.notification-modal-overlay {
   position: fixed;
   inset: 0;
-  background:
-    radial-gradient(circle at top, rgba(59, 130, 246, 0.16), transparent 34%),
-    rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(7px);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -19,10 +17,9 @@
   max-height: 90vh;
   overflow: auto;
   scrollbar-width: none;
-  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  border-radius: 24px;
-  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.24);
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
 }
 
 .modal-content.notification-modal::-webkit-scrollbar {
@@ -51,19 +48,19 @@
   display: grid;
   place-items: center;
   color: #ffffff;
-  font-size: 21px;
-  border-radius: 16px;
+  font-size: 20px;
+  border-radius: 12px;
   background: linear-gradient(135deg, #1e2a4a 0%, #2563eb 100%);
-  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.24);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
 .notification-modal h2 {
-  margin: 2px 0 5px;
-  color: #172554;
-  font-size: 24px;
+  margin: 0 0 2px;
+  color: #1E2A4A;
+  font-size: 20px;
   line-height: 1.2;
-  font-weight: 750;
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .notification-modal .header-title-group p {
@@ -73,24 +70,24 @@
 }
 
 .notification-modal .modal-close {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  flex: 0 0 40px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  color: #64748b;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 36px;
+  background: #F3F4F6;
+  border: none;
+  border-radius: 10px;
+  font-size: 18px;
+  color: #6B7280;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .notification-modal .modal-close:hover {
-  background: #eff6ff;
-  border-color: #bfdbfe;
-  color: #2563eb;
-  transform: translateY(-1px);
+  background: #E5E7EB;
+  color: #1E2A4A;
 }
 
 .notification-form {
@@ -100,7 +97,7 @@
   padding: 26px 32px 28px;
 }
 
-.form-section.two-column {
+.notification-modal .form-section.two-column {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
@@ -120,54 +117,54 @@
   letter-spacing: 0.01em;
 }
 
-.toggle-group {
+.notification-modal .toggle-group {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
   gap: 6px;
   padding: 6px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+  background: #FAFAFA;
+  border: 1.5px solid #E5E7EB;
+  border-radius: 10px;
 }
 
-.toggle-btn {
-  min-height: 40px;
+.notification-modal .toggle-btn {
+  min-height: 38px;
   padding: 9px 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: 11px;
-  color: #475569;
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+  color: #6B7280;
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
   line-height: 1.2;
   transition: all 0.2s ease;
+  font-family: inherit;
 }
 
-.toggle-btn:hover {
+.notification-modal .toggle-btn:hover {
   background: #ffffff;
-  border-color: #e2e8f0;
-  color: #1e293b;
+  border-color: #E5E7EB;
+  color: #374151;
 }
 
-.toggle-btn.active {
+.notification-modal .toggle-btn.active {
   background: #ffffff;
   border-color: #bfdbfe;
   color: #2563eb;
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.13);
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.15);
 }
 
-.toggle-btn svg {
+.notification-modal .toggle-btn svg {
   flex: 0 0 auto;
 }
 
-.toggle-text {
+.notification-modal .toggle-text {
   display: inline-block;
 }
 
@@ -175,20 +172,20 @@
 .notification-modal .form-select,
 .notification-modal textarea {
   width: 100%;
-  padding: 13px 15px;
-  border-radius: 14px;
-  border: 1px solid #dbe3ef;
-  background: #ffffff;
-  color: #0f172a;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1.5px solid #E5E7EB;
+  background: #FAFAFA;
+  color: #374151;
   font-size: 14px;
+  font-family: inherit;
   outline: none;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .notification-modal input::placeholder,
 .notification-modal textarea::placeholder {
-  color: #94a3b8;
+  color: #9CA3AF;
 }
 
 .notification-modal input:focus,
@@ -196,20 +193,19 @@
 .notification-modal textarea:focus {
   border-color: #3b82f6;
   background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .notification-modal textarea {
-  min-height: 132px;
+  min-height: 120px;
   resize: vertical;
 }
 
 .notification-modal .form-select {
-  height: 46px;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
-.char-counter {
+.notification-modal .char-counter {
   margin-top: 8px;
   color: #94a3b8;
   font-size: 12px;
@@ -217,92 +213,93 @@
   text-align: right;
 }
 
-.notif-info-box {
+.notification-modal .notif-info-box {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: flex-start;
-  padding: 14px 16px;
-  border-radius: 16px;
+  padding: 10px 14px;
+  border-radius: 10px;
   background: #eff6ff;
   border: 1px solid #bfdbfe;
   color: #475569;
   font-size: 13px;
 }
 
-.notif-info-box svg {
+.notification-modal .notif-info-box svg {
   flex: 0 0 auto;
   margin-top: 1px;
   color: #2563eb;
 }
 
-.modal-footer {
+.notification-modal .modal-footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   padding-top: 18px;
-  border-top: 1px solid #eef2f7;
+  border-top: 1px solid #F3F4F6;
 }
 
 .notification-modal .btn-secondary,
 .notification-modal .btn-primary {
-  min-height: 44px;
-  padding: 0 18px;
-  border-radius: 12px;
+  padding: 11px 20px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  font-family: inherit;
 }
 
 .notification-modal .btn-secondary {
-  background: #ffffff;
-  border: 1px solid #dbe3ef;
-  color: #475569;
+  background: transparent;
+  border: 1.5px solid #E5E7EB;
+  color: #6B7280;
 }
 
 .notification-modal .btn-secondary:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  color: #1e293b;
+  background: #F9FAFB;
+  border-color: #D1D5DB;
+  color: #374151;
 }
 
 .notification-modal .btn-primary {
+  padding: 11px 24px;
   background: linear-gradient(135deg, #1e2a4a 0%, #2563eb 100%);
   color: #ffffff;
   border: none;
-  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.24);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
 .notification-modal .btn-primary:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 16px 30px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
 }
 
 .notification-modal .btn-primary:disabled {
-  opacity: 0.65;
+  opacity: 0.7;
   cursor: not-allowed;
-  box-shadow: none;
+  transform: none;
 }
 
-.error-message {
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
+.notification-modal .error-message {
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #DC2626;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 @media (max-width: 720px) {
-  .modal-overlay {
+  .notification-modal-overlay {
     align-items: flex-end;
     padding: 14px;
   }
 
   .modal-content.notification-modal {
     width: 100%;
-    border-radius: 22px;
+    border-radius: 20px;
   }
 
   .notification-modal .modal-header,
@@ -311,11 +308,11 @@
     padding-right: 20px;
   }
 
-  .form-section.two-column {
+  .notification-modal .form-section.two-column {
     grid-template-columns: 1fr;
   }
 
-  .modal-footer {
+  .notification-modal .modal-footer {
     flex-direction: column-reverse;
   }
 
