@@ -36,6 +36,7 @@ function AdminUsers() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   // Reset password
   const [showResetModal, setShowResetModal] = useState(false);
@@ -116,17 +117,22 @@ function AdminUsers() {
   };
 
   // ─── Delete user ───
-  const confirmDelete = (u) => { setDeleteTarget(u); setShowDeleteConfirm(true); };
+  const confirmDelete = (u) => {
+    setDeleteTarget(u);
+    setDeleteError('');
+    setShowDeleteConfirm(true);
+  };
 
   const handleDelete = async () => {
     setDeleteLoading(true);
+    setDeleteError('');
     try {
       await deleteUser(deleteTarget.id);
       setShowDeleteConfirm(false);
       setDeleteTarget(null);
       await fetchUsers();
     } catch (err) {
-      console.error('Failed to delete user:', err);
+      setDeleteError(err.response?.data?.detail || 'Impossible de supprimer cet utilisateur.');
     } finally { setDeleteLoading(false); }
   };
 
@@ -300,6 +306,9 @@ function AdminUsers() {
             <div className="confirm-dialog-message">
               Êtes-vous sûr de vouloir supprimer <strong>{displayName(deleteTarget)}</strong> ({deleteTarget.email}) ? Cette action est irréversible.
             </div>
+            {deleteError && (
+              <div style={{ color: '#EF4444', marginBottom: 12, fontSize: '0.9rem' }}>{deleteError}</div>
+            )}
             <div className="confirm-dialog-actions">
               <button type="button" className="confirm-btn" onClick={() => setShowDeleteConfirm(false)}>Annuler</button>
               <button type="button" className="confirm-btn confirm" onClick={handleDelete} disabled={deleteLoading}>

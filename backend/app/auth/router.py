@@ -12,6 +12,7 @@ import os
 import shutil
 from pathlib import Path
 from app.models.user import User
+from app.auth.deletion import delete_user_cascade
 from app.models.audit import AuditLog
 from app.auth.service import (
     authenticate_user,
@@ -343,10 +344,17 @@ def delete_user(
         raise HTTPException(status_code=404, detail="User not found")
     if user.id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot delete yourself")
-    # Remove related audit logs first (FK constraint)
-    db.query(AuditLog).filter(AuditLog.user_id == user_id).delete()
-    db.delete(user)
+    delete_user_cascade(db, user_id)
     db.commit()
+    log_action(
+        db,
+        action="DELETE_USER",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="user",
+        resource_id=str(user_id),
+        status="success",
+    )
     return {"message": "User deleted", "id": user_id}
 
 
