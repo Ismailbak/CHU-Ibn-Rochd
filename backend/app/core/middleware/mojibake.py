@@ -21,7 +21,7 @@ class MojibakeRepairMiddleware(BaseHTTPMiddleware):
             return response
 
         content_type = response.headers.get("content-type", "")
-        if "application/json" not in content_type:
+        if "json" not in content_type.lower():
             return response
 
         body = b""

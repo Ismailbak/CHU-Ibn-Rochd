@@ -14,6 +14,7 @@ import uuid
 from sqlalchemy import String, cast, or_
 from sqlalchemy.orm import Session, joinedload  # joinedload used to avoid N+1 queries
 
+from app.core.schemas.mojibake_safe import MojibakeSafeBase
 from app.core.database import get_db
 from app.models.medical_act import MedicalAct as MedicalActModel, ActDocument as ActDocumentModel, MedicalActStaff as MedicalActStaffModel, ActDiagnosis as ActDiagnosisModel, ActTreatment as ActTreatmentModel
 from app.models.patient import Patient as PatientModel
@@ -66,7 +67,7 @@ class MedicalActStaffCreate(BaseModel):
     role: Optional[str] = None
 
 
-class ActDiagnosisOut(BaseModel):
+class ActDiagnosisOut(MojibakeSafeBase):
     id: int
     act_id: int
     diagnosis_label: str
@@ -84,7 +85,7 @@ class ActDiagnosisCreate(BaseModel):
     diagnosis_type: str = "principal"
 
 
-class ActTreatmentOut(BaseModel):
+class ActTreatmentOut(MojibakeSafeBase):
     id: int
     act_id: int
     drug_name: Optional[str] = None  # Allow None for legacy/invalid data
@@ -113,7 +114,7 @@ class TreatmentInput(BaseModel):
     notes: Optional[str] = None
 
 
-class MedicalActBase(BaseModel):
+class MedicalActBase(MojibakeSafeBase):
     patient_id: int
     act_type: str
     description: Optional[str] = None

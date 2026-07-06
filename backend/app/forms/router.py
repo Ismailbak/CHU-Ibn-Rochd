@@ -11,6 +11,7 @@ from datetime import date, datetime
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.schemas.mojibake_safe import MojibakeSafeBase
 from app.models.form_system import (
     RefCareType, RefActType, RefFormType, ActForm, FormCsRd,
     DynamicFormTemplate, DynamicFormResponse
@@ -30,7 +31,7 @@ router = APIRouter()
 # Pydantic Schemas
 # ───────────────────────────────────────────────────────────────────────
 
-class RefCareTypeOut(BaseModel):
+class RefCareTypeOut(MojibakeSafeBase):
     id: int
     code: str
     label: str
@@ -42,7 +43,7 @@ class RefCareTypeOut(BaseModel):
         from_attributes = True
 
 
-class RefActTypeOut(BaseModel):
+class RefActTypeOut(MojibakeSafeBase):
     id: int
     ref_care_type_id: int
     code: str
@@ -55,7 +56,7 @@ class RefActTypeOut(BaseModel):
         from_attributes = True
 
 
-class RefFormTypeOut(BaseModel):
+class RefFormTypeOut(MojibakeSafeBase):
     id: int
     ref_act_type_id: int
     form_name: str
@@ -908,7 +909,7 @@ class FormTemplateCreate(BaseModel):
     )
     is_active: bool = True
 
-class FormTemplateResponse(BaseModel):
+class FormTemplateResponse(MojibakeSafeBase):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: int
@@ -926,16 +927,15 @@ class FormResponseCreate(BaseModel):
     template_id: int
     response_data: Dict[str, Any]
 
-class FormResponseResponse(BaseModel):
+class FormResponseResponse(MojibakeSafeBase):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     act_id: int
     template_id: int
     template_name: Optional[str] = None
     response_data: Dict[str, Any]
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 @router.get("/templates", response_model=List[FormTemplateResponse])
 def get_templates(

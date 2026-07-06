@@ -37,6 +37,11 @@ def test_repair_utf8_mojibake():
     assert repair_utf8_mojibake("PR s├®ropositive") == "PR séropositive"
     assert repair_utf8_mojibake("Syndrome de Sj├Âgren primitif") == "Syndrome de Sjögren primitif"
     assert repair_utf8_mojibake("Ost├®op├®nie") == "Ostéopénie"
+    assert repair_utf8_mojibake("Rhumatismes D├®g├®n├®ratifs") == "Rhumatismes Dégénératifs"
+    assert repair_utf8_mojibake("├ëchographie") == "Échographie"
+    assert repair_utf8_mojibake("Gestes Th├®rapeutiques") == "Gestes Thérapeutiques"
+    assert repair_utf8_mojibake("S├®ances de R├®adaptation") == "Séances de Réadaptation"
+    assert repair_utf8_mojibake("Densitom├®trie Osseuse") == "Densitométrie Osseuse"
 
 
 def test_classify_appointment_reason():

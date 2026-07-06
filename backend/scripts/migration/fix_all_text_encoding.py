@@ -18,6 +18,10 @@ from scripts.migration.migrate_chuir import connect
 
 # table -> text columns to scan/repair
 TEXT_COLUMNS: dict[str, list[str]] = {
+    "ref_care_types": ["code", "label", "description"],
+    "ref_act_types": ["code", "label", "description"],
+    "ref_form_types": ["form_name", "form_label"],
+    "dynamic_form_templates": ["title"],
     "patients": [
         "first_name", "last_name", "civility", "address", "city",
         "marital_status", "nationality", "profession", "insurance",

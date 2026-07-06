@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { repairDeep } from '../utils/textEncoding';
 
 /** API base: dev uses FastAPI directly; production uses Nginx same-origin /api. */
 export const API_URL =
@@ -37,7 +38,12 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (response?.data != null && typeof response.data === 'object') {
+      response.data = repairDeep(response.data);
+    }
+    return response;
+  },
   (error) => {
     if (error.response && error.response.status === 401 && localStorage.getItem('token')) {
       localStorage.removeItem('token');
