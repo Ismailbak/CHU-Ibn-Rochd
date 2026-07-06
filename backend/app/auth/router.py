@@ -19,6 +19,7 @@ from app.auth.service import (
     create_user,
     get_user_by_username,
     get_user_by_email,
+    get_user_by_username_or_email,
     hash_password,
     verify_password,
 )
@@ -106,6 +107,41 @@ def login(
     access_token = create_access_token(data={"sub": user.username})
     log_action(db, action="LOGIN_SUCCESS", user_id=user.id, username=user.username, status="success", ip_address=client_ip)
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+@router.post("/forgot-password")
+def request_password_reset(
+    request: Request,
+    data: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    """Enregistre une demande de réinitialisation ; suivi manuel par un administrateur."""
+    client_ip = request.client.host if request.client else None
+    login = data.email.strip()
+    user = get_user_by_username_or_email(db, login)
+    if user:
+        log_action(
+            db,
+            action="PASSWORD_RESET_REQUEST",
+            user_id=user.id,
+            username=user.username,
+            resource_type="user",
+            resource_id=str(user.id),
+            status="pending",
+            details="Demande de réinitialisation de mot de passe",
+            ip_address=client_ip,
+        )
+    return {
+        "message": (
+            "Si un compte correspond à cette adresse, votre demande a été enregistrée. "
+            "Un administrateur ou un référent technique vous contactera pour réinitialiser "
+            "votre mot de passe."
+        )
+    }
 
 
 @router.post("/signup")

@@ -71,6 +71,9 @@ api.interceptors.response.use(
 export const login = (username, password) =>
   api.post('/auth/login', new URLSearchParams({ username, password }));
 
+export const requestPasswordReset = (email) =>
+  api.post('/auth/forgot-password', { email });
+
 export const getCurrentUser = () => api.get('/auth/me');
 
 // Patients

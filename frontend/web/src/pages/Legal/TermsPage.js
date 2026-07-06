@@ -89,6 +89,20 @@ function TermsPage() {
             <li>L&apos;utilisateur s&apos;engage à fournir des informations exactes lors de l&apos;inscription et à signaler toute compromission de ses identifiants sans délai.</li>
             <li>L&apos;établissement se réserve le droit de suspendre ou supprimer un compte en cas de violation des CGU, de la déontologie médicale ou des politiques internes.</li>
           </ul>
+          <h3>4.1 Mot de passe oublié et réinitialisation</h3>
+          <p>
+            RhumatoAI ne propose pas de réinitialisation automatique par e-mail (service
+            hébergé on-premise). En cas d&apos;oubli de mot de passe, l&apos;utilisateur peut :
+          </p>
+          <ul>
+            <li>soumettre une demande via la page <strong>« Mot de passe oublié »</strong> accessible depuis l&apos;écran de connexion ;</li>
+            <li>contacter un administrateur du service ou un référent technique (Samy Housbane, Ismail Bakraoui) ;</li>
+            <li>obtenir une réinitialisation manuelle par un administrateur habilité (interface d&apos;administration).</li>
+          </ul>
+          <p>
+            Après réinitialisation, l&apos;utilisateur doit modifier son mot de passe depuis son
+            profil. Toute demande est tracée dans les journaux d&apos;audit à des fins de sécurité.
+          </p>
         </section>
 
         <section>
