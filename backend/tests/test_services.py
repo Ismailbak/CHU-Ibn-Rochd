@@ -33,3 +33,6 @@ def test_repair_utf8_mojibake():
     assert repair_utf8_mojibake(latin1_garbled) == correct
     assert repair_utf8_mojibake(cp437_garbled) == correct
     assert repair_utf8_mojibake(correct) == correct
+    assert repair_utf8_mojibake("PR s├®ropositive") == "PR séropositive"
+    assert repair_utf8_mojibake("Syndrome de Sj├Âgren primitif") == "Syndrome de Sjögren primitif"
+    assert repair_utf8_mojibake("Ost├®op├®nie") == "Ostéopénie"
