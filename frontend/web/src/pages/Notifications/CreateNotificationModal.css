@@ -1,123 +1,117 @@
-/* Styles for CreateNotificationModal — aligned with app-wide modal design tokens */
-.notification-modal-overlay {
+/* Create Notification Modal — fully namespaced (cnm-*) to avoid page CSS collisions */
+
+.cnm-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
   padding: 28px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
 }
 
-.modal-content.notification-modal {
-  width: 760px;
-  max-width: 100%;
+.cnm-panel {
+  width: min(680px, 100%);
   max-height: 90vh;
   overflow: auto;
-  scrollbar-width: none;
   background: #fff;
   border-radius: 20px;
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+  scrollbar-width: none;
 }
 
-.modal-content.notification-modal::-webkit-scrollbar {
+.cnm-panel::-webkit-scrollbar {
   display: none;
 }
 
-.notification-modal .modal-header {
+.cnm-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 20px;
-  padding: 28px 32px 22px;
-  border-bottom: 1px solid #eef2f7;
-}
-
-.notification-modal .header-title-group {
-  display: flex;
   gap: 16px;
-  align-items: flex-start;
+  padding: 24px 28px 20px;
+  border-bottom: 1px solid #E5E7EB;
 }
 
-.notification-modal .header-icon {
+.cnm-header-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+}
+
+.cnm-header-icon {
+  flex-shrink: 0;
   width: 46px;
   height: 46px;
-  flex: 0 0 46px;
-  display: grid;
-  place-items: center;
-  color: #ffffff;
-  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 12px;
   background: linear-gradient(135deg, #1e2a4a 0%, #2563eb 100%);
+  color: #fff;
+  font-size: 20px;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
-.notification-modal h2 {
-  margin: 0 0 2px;
-  color: #1E2A4A;
+.cnm-header h2 {
+  margin: 0 0 4px;
   font-size: 20px;
-  line-height: 1.2;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  color: #1E2A4A;
+  line-height: 1.2;
 }
 
-.notification-modal .header-title-group p {
+.cnm-header p {
   margin: 0;
-  color: #64748b;
   font-size: 14px;
+  color: #6B7280;
 }
 
-.notification-modal .modal-close {
+.cnm-close {
+  flex-shrink: 0;
   width: 36px;
   height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 36px;
-  background: #F3F4F6;
   border: none;
   border-radius: 10px;
-  font-size: 18px;
+  background: #F3F4F6;
   color: #6B7280;
+  font-size: 18px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.notification-modal .modal-close:hover {
+.cnm-close:hover {
   background: #E5E7EB;
   color: #1E2A4A;
 }
 
-.notification-form {
+.cnm-form {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 26px 32px 28px;
+  padding: 24px 28px 28px;
 }
 
-.notification-modal .notif-field-block {
+.cnm-field {
   display: flex;
   flex-direction: column;
   gap: 8px;
   min-width: 0;
 }
 
-.notification-modal .field,
-.notification-modal .form-group {
-  min-width: 0;
-}
-
-.notification-modal label {
-  display: block;
-  margin: 0;
-  color: #374151;
+.cnm-label {
   font-size: 13px;
   font-weight: 600;
+  color: #374151;
 }
 
-.notification-modal .notif-segmented {
+.cnm-segments {
   display: grid;
   gap: 6px;
   padding: 4px;
@@ -126,21 +120,20 @@
   border-radius: 10px;
 }
 
-.notification-modal .notif-segmented-3 {
+.cnm-segments-3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.notification-modal .notif-segmented-2 {
+.cnm-segments-2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.notification-modal .notif-segment {
+.cnm-segment {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   height: 42px;
-  min-height: 42px;
   padding: 0 10px;
   border: 1.5px solid transparent;
   border-radius: 8px;
@@ -151,40 +144,40 @@
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
-  transition: all 0.2s ease;
   font-family: inherit;
+  transition: all 0.2s ease;
 }
 
-.notification-modal .notif-segment svg {
-  flex: 0 0 auto;
+.cnm-segment svg {
+  flex-shrink: 0;
   font-size: 15px;
 }
 
-.notification-modal .notif-segment span {
+.cnm-segment span {
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.notification-modal .notif-segment:hover {
-  background: #ffffff;
+.cnm-segment:hover {
+  background: #fff;
   border-color: #E5E7EB;
   color: #374151;
 }
 
-.notification-modal .notif-segment.active {
-  background: #ffffff;
+.cnm-segment.active {
+  background: #fff;
   border-color: #93C5FD;
   color: #2563EB;
   box-shadow: 0 1px 2px rgba(37, 99, 235, 0.12);
 }
 
-.notification-modal input,
-.notification-modal .form-select,
-.notification-modal textarea {
+.cnm-input,
+.cnm-select,
+.cnm-textarea {
   width: 100%;
   padding: 11px 14px;
-  border-radius: 10px;
   border: 1.5px solid #E5E7EB;
+  border-radius: 10px;
   background: #FAFAFA;
   color: #374151;
   font-size: 14px;
@@ -193,105 +186,50 @@
   transition: all 0.2s ease;
 }
 
-.notification-modal input::placeholder,
-.notification-modal textarea::placeholder {
+.cnm-input::placeholder,
+.cnm-textarea::placeholder {
   color: #9CA3AF;
 }
 
-.notification-modal input:focus,
-.notification-modal .form-select:focus,
-.notification-modal textarea:focus {
-  border-color: #3b82f6;
-  background: #ffffff;
+.cnm-input:focus,
+.cnm-select:focus,
+.cnm-textarea:focus {
+  border-color: #3B82F6;
+  background: #fff;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.notification-modal textarea {
+.cnm-textarea {
   min-height: 120px;
   resize: vertical;
 }
 
-.notification-modal .form-select {
-  margin-top: 10px;
-}
-
-.notification-modal .char-counter {
-  margin-top: 8px;
-  color: #94a3b8;
+.cnm-char-count {
+  text-align: right;
   font-size: 12px;
   font-weight: 600;
-  text-align: right;
+  color: #9CA3AF;
 }
 
-.notification-modal .notif-info-box {
+.cnm-info {
   display: flex;
   gap: 10px;
   align-items: flex-start;
   padding: 10px 14px;
   border-radius: 10px;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
   color: #475569;
   font-size: 13px;
 }
 
-.notification-modal .notif-info-box svg {
-  flex: 0 0 auto;
+.cnm-info svg {
+  flex-shrink: 0;
   margin-top: 1px;
-  color: #2563eb;
+  color: #2563EB;
 }
 
-.notification-modal .modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding-top: 18px;
-  border-top: 1px solid #F3F4F6;
-}
-
-.notification-modal .btn-secondary,
-.notification-modal .btn-primary {
-  padding: 11px 20px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: inherit;
-}
-
-.notification-modal .btn-secondary {
-  background: transparent;
-  border: 1.5px solid #E5E7EB;
-  color: #6B7280;
-}
-
-.notification-modal .btn-secondary:hover {
-  background: #F9FAFB;
-  border-color: #D1D5DB;
-  color: #374151;
-}
-
-.notification-modal .btn-primary {
-  padding: 11px 24px;
-  background: linear-gradient(135deg, #1e2a4a 0%, #2563eb 100%);
-  color: #ffffff;
-  border: none;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-}
-
-.notification-modal .btn-primary:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
-}
-
-.notification-modal .btn-primary:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.notification-modal .error-message {
+.cnm-error {
   padding: 12px 16px;
   border-radius: 10px;
   background: #FEF2F2;
@@ -301,39 +239,83 @@
   font-weight: 500;
 }
 
+.cnm-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 18px;
+  border-top: 1px solid #F3F4F6;
+}
+
+.cnm-btn-cancel,
+.cnm-btn-submit {
+  padding: 11px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.cnm-btn-cancel {
+  border: 1.5px solid #E5E7EB;
+  background: transparent;
+  color: #6B7280;
+}
+
+.cnm-btn-cancel:hover {
+  background: #F9FAFB;
+  border-color: #D1D5DB;
+  color: #374151;
+}
+
+.cnm-btn-submit {
+  padding: 11px 24px;
+  border: none;
+  background: linear-gradient(135deg, #1e2a4a 0%, #2563eb 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.cnm-btn-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+}
+
+.cnm-btn-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
 @media (max-width: 720px) {
-  .notification-modal-overlay {
+  .cnm-overlay {
     align-items: flex-end;
     padding: 14px;
   }
 
-  .modal-content.notification-modal {
-    width: 100%;
-    border-radius: 20px;
-  }
-
-  .notification-modal .modal-header,
-  .notification-form {
+  .cnm-header,
+  .cnm-form {
     padding-left: 20px;
     padding-right: 20px;
   }
 
-  .notification-modal .notif-segmented-3,
-  .notification-modal .notif-segmented-2 {
+  .cnm-segments-3,
+  .cnm-segments-2 {
     grid-template-columns: 1fr;
   }
 
-  .notification-modal .notif-segment {
+  .cnm-segment {
     height: 44px;
-    min-height: 44px;
   }
 
-  .notification-modal .modal-footer {
+  .cnm-footer {
     flex-direction: column-reverse;
   }
 
-  .notification-modal .btn-secondary,
-  .notification-modal .btn-primary {
+  .cnm-btn-cancel,
+  .cnm-btn-submit {
     width: 100%;
   }
 }
