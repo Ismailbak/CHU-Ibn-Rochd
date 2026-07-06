@@ -24,50 +24,8 @@ import {
   CLINICAL_FORM_AUTOSAVE_EVENT
 } from '../../components/MedicalForms/AllForms';
 import DynamicFormRenderer from './DynamicFormRenderer';
+import TreatmentPrescriptionPanel from '../../components/Treatments/TreatmentPrescriptionPanel';
 import './MedicalActForm.css';
-
-const RHEUMATOLOGY_TREATMENTS = [
-  {
-    category: "Antalgiques",
-    items: ["Paracétamol", "Paracétamol + Codéine/Tramadol", "Néfopam", "Tramadol"]
-  },
-  {
-    category: "AINS (Anti-inflammatoires Non Stéroïdiens)",
-    items: ["Diclofénac", "Ibuprofène", "Kétoprofène", "Célécoxib", "Étoriocoxib", "Méloxicam"]
-  },
-  {
-    category: "Corticoïdes",
-    items: ["Prednisone", "Méthylprednisolone"]
-  },
-  {
-    category: "Traitements de fond (csDMARDs)",
-    items: ["Méthotrexate", "Sulfasalazine", "Léflunomide", "Hydroxychloroquine"]
-  },
-  {
-    category: "Biothérapies (bDMARDs)",
-    items: ["Adalimumab", "Étanercept", "Infliximab", "Tocilizumab", "Rituximab"]
-  },
-  {
-    category: "Anti-JAK (tsDMARDs)",
-    items: ["Tofacitinib", "Baricitinib", "Upadacitinib"]
-  },
-  {
-    category: "Ostéoporose",
-    items: ["Alendronate", "Risédronate", "Acide zolédronique", "Dénosumab"]
-  },
-  {
-    category: "Anti-goutteux",
-    items: ["Colchicine", "Allopurinol", "Fébuxostat"]
-  },
-  {
-    category: "Myorelaxants",
-    items: ["Thiocolchicoside"]
-  },
-  {
-    category: "Infiltrations",
-    items: ["Corticoïdes injectables", "Acide hyaluronique", "PRP"]
-  }
-];
 
 const CATEGORY_OPTIONS = [
   { value: 'rheumatology', label: 'Rhumatologie' },
@@ -239,9 +197,6 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
   const [isAutoSavingForm, setIsAutoSavingForm] = useState(false);
   
   // Treatment Form State
-  const [selectedFamily, setSelectedFamily] = useState('');
-  const [selectedDrug, setSelectedDrug] = useState('');
-  const [treatmentDetails, setTreatmentDetails] = useState({ duration: '', dosage: '', frequency: '' });
   
   const [careTypes, setCareTypes] = useState([]);
   const [actTypes, setActTypes] = useState([]);
@@ -1251,119 +1206,10 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit }) {
               </div>
             </div>
 
-            {/* Treatment */}
-            <div className="maf-field">
-              <label className="maf-label">Traitement / Ordonnance</label>
-              
-              <div className="maf-treatment-adder" style={{ background: '#FAFAFA', padding: '16px', borderRadius: '10px', border: '1.5px solid #E5E7EB' }}>
-                <div className="maf-grid-2" style={{ gap: '15px' }}>
-                  <div className="maf-field">
-                    <label className="maf-label">Famille de traitement</label>
-                    <select 
-                      className="maf-input"
-                      value={selectedFamily}
-                      onChange={(e) => { setSelectedFamily(e.target.value); setSelectedDrug(''); }}
-                    >
-                      <option value="">-- Sélectionner une famille --</option>
-                      {RHEUMATOLOGY_TREATMENTS.map(group => (
-                        <option key={group.category} value={group.category}>{group.category}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="maf-field">
-                    <label className="maf-label">Médicament</label>
-                    <select 
-                      className="maf-input"
-                      value={selectedDrug}
-                      onChange={(e) => setSelectedDrug(e.target.value)}
-                      disabled={!selectedFamily}
-                    >
-                      <option value="">-- Sélectionner un médicament --</option>
-                      {selectedFamily && RHEUMATOLOGY_TREATMENTS.find(g => g.category === selectedFamily)?.items.map(item => (
-                        <option key={item} value={item}>{item}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {selectedDrug && (
-                  <div className="maf-grid-3" style={{ gap: '15px', marginTop: '15px' }}>
-                    <div className="maf-field">
-                      <label className="maf-label">Dosage</label>
-                      <input 
-                        type="text" className="maf-input" placeholder="Ex: 1000mg"
-                        value={treatmentDetails.dosage} onChange={e => setTreatmentDetails(p => ({...p, dosage: e.target.value}))}
-                      />
-                    </div>
-                    <div className="maf-field">
-                      <label className="maf-label">Fréquence</label>
-                      <input 
-                        type="text" className="maf-input" placeholder="Ex: 3x/jour"
-                        value={treatmentDetails.frequency} onChange={e => setTreatmentDetails(p => ({...p, frequency: e.target.value}))}
-                      />
-                    </div>
-                    <div className="maf-field">
-                      <label className="maf-label">Durée</label>
-                      <input 
-                        type="text" className="maf-input" placeholder="Ex: 7 jours"
-                        value={treatmentDetails.duration} onChange={e => setTreatmentDetails(p => ({...p, duration: e.target.value}))}
-                      />
-                    </div>
-                  </div>
-                )}
-                
-                <button 
-                  type="button" 
-                  className="maf-btn-add-lab" 
-                  style={{ marginTop: '15px' }}
-                  disabled={!selectedDrug}
-                  onClick={() => {
-                    setForm(prev => ({
-                      ...prev, 
-                      treatment: [...(Array.isArray(prev.treatment) ? prev.treatment : []), { drug_name: selectedDrug, ...treatmentDetails }]
-                    }));
-                    setSelectedDrug('');
-                    setTreatmentDetails({ duration: '', dosage: '', frequency: '' });
-                  }}
-                >
-                  <FiPlus /> Ajouter au traitement
-                </button>
-              </div>
-
-              {Array.isArray(form.treatment) && form.treatment.length > 0 && (
-                <div className="maf-active-treatments" style={{ marginTop: '20px' }}>
-                  <h4 className="maf-treatment-group-title" style={{ marginBottom: '10px' }}>Traitement prescrit</h4>
-                  <div className="maf-lab-results-list" style={{ marginBottom: 0 }}>
-                    {form.treatment.map((t, idx) => (
-                      <div key={idx} className="maf-lab-result-item">
-                        <div className="maf-lab-result-content">
-                          <div className="maf-lab-result-header">
-                            <span className="maf-lab-result-name">{t.drug_name}</span>
-                          </div>
-                          <span className="maf-lab-result-date">
-                            {[
-                              t.dosage ? `Dosage: ${t.dosage}` : '',
-                              t.frequency ? `Fréquence: ${t.frequency}` : '',
-                              t.duration ? `Durée: ${t.duration}` : ''
-                            ].filter(Boolean).join(' • ')}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          className="maf-lab-result-remove"
-                          onClick={() => setForm(prev => ({
-                            ...prev,
-                            treatment: prev.treatment.filter((_, i) => i !== idx)
-                          }))}
-                        >
-                          <FiX />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            <TreatmentPrescriptionPanel
+              treatments={Array.isArray(form.treatment) ? form.treatment : []}
+              onChange={(treatment) => setForm((prev) => ({ ...prev, treatment }))}
+            />
 
             {/* Notes */}
             <div className="maf-field">

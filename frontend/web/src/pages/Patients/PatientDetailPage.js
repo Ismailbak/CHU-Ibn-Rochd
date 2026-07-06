@@ -10,7 +10,16 @@ import Layout from '../../components/layout/Layout';
 import { LoadingSpinner, Breadcrumb } from '../../components/common';
 import PatientForm from './PatientForm';
 import LabResultForm from './LabResultForm';
+import PatientTreatmentForm from './PatientTreatmentForm';
 import './PatientDetailPage.css';
+
+function formatTreatmentDetails(treatment) {
+  return [
+    treatment.dosage,
+    treatment.frequency,
+    treatment.duration,
+  ].filter(Boolean).join(' • ');
+}
 
 function calculateAge(dateOfBirth) {
   if (!dateOfBirth) return null;
@@ -30,6 +39,7 @@ function PatientDetailPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showLabResultModal, setShowLabResultModal] = useState(false);
+  const [showTreatmentModal, setShowTreatmentModal] = useState(false);
 
   const fetchPatient = async () => {
     setIsLoading(true);
@@ -83,12 +93,14 @@ function PatientDetailPage() {
 
       // Build current treatments from acts that have treatment
       patientData.currentTreatments = patientData.acts
-        .flatMap(act => 
+        .flatMap(act =>
           act.treatments
             ?.filter(t => t && t.drug_name && t.drug_name.trim())
             .map(treatment => ({
               name: treatment.drug_name || 'Médicament',
               dosage: treatment.dosage || '',
+              frequency: treatment.frequency || '',
+              duration: treatment.duration || '',
               startDate: act.date || act.act_date,
             })) || []
         );
@@ -371,8 +383,12 @@ function PatientDetailPage() {
                     ? patient.currentTreatments.map((treatment, index) => (
                         <div key={index} className="treatment-badge">
                           <div className="treatment-badge-name">{treatment.name}</div>
-                          {treatment.dosage && <div className="treatment-badge-dosage">{treatment.dosage}</div>}
-                          {treatment.startDate && <div className="treatment-badge-date">Depuis {formatDate(treatment.startDate)}</div>}
+                          {formatTreatmentDetails(treatment) && (
+                            <div className="treatment-badge-dosage">{formatTreatmentDetails(treatment)}</div>
+                          )}
+                          {treatment.startDate && (
+                            <div className="treatment-badge-date">Depuis {formatDate(treatment.startDate)}</div>
+                          )}
                         </div>
                       ))
                     : <p className="empty-state">Aucun traitement en cours</p>
@@ -409,7 +425,9 @@ function PatientDetailPage() {
             <div className="treatments-section">
               <div className="section-header">
                 <h3>Traitements en cours</h3>
-                <button className="add-btn"><FiPlusCircle /> Ajouter</button>
+                <button className="add-btn" onClick={() => setShowTreatmentModal(true)}>
+                  <FiPlusCircle /> Ajouter
+                </button>
               </div>
               <div className="treatments-list">
                 {(patient.currentTreatments && Array.isArray(patient.currentTreatments) && patient.currentTreatments.length > 0)
@@ -418,7 +436,9 @@ function PatientDetailPage() {
                         <div className="treatment-icon">💊</div>
                         <div className="treatment-info">
                           <h4>{treatment.name}</h4>
-                          <p className="treatment-dosage">{treatment.dosage}</p>
+                          {formatTreatmentDetails(treatment) && (
+                            <p className="treatment-dosage">{formatTreatmentDetails(treatment)}</p>
+                          )}
                           <span className="treatment-date">Depuis {formatDate(treatment.startDate)}</span>
                         </div>
                       </div>
@@ -569,6 +589,22 @@ function PatientDetailPage() {
                 fetchPatient();
               }}
               onClose={() => setShowLabResultModal(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Treatment Modal */}
+      {showTreatmentModal && (
+        <div className="modal-overlay" onClick={() => setShowTreatmentModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <PatientTreatmentForm
+              patientId={patient.id}
+              onSuccess={() => {
+                setShowTreatmentModal(false);
+                fetchPatient();
+              }}
+              onClose={() => setShowTreatmentModal(false)}
             />
           </div>
         </div>
