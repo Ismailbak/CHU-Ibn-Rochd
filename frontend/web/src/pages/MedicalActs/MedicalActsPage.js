@@ -842,7 +842,8 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
 
 function MedicalActsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [newActPatientId, setNewActPatientId] = useState(null);
+  const urlPrefillPatientId = searchParams.get('new') === '1' ? searchParams.get('patientId') : null;
+  const [newActPatientId, setNewActPatientId] = useState(urlPrefillPatientId);
   const canDeleteMedicalAct = canDeleteClinicalRecords();
   const [stats, setStats] = useState(null);
   const [doctors, setDoctors] = useState([]);
@@ -853,13 +854,10 @@ function MedicalActsPage() {
   const [selectedType, setSelectedType] = useState('Tous');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(Boolean(urlPrefillPatientId));
 
   useEffect(() => {
-    const patientId = searchParams.get('patientId');
-    if (searchParams.get('new') === '1' && patientId) {
-      setNewActPatientId(patientId);
-      setShowAddModal(true);
+    if (searchParams.get('new') === '1' && searchParams.get('patientId')) {
       const next = new URLSearchParams(searchParams);
       next.delete('patientId');
       next.delete('new');
@@ -1128,6 +1126,7 @@ function MedicalActsPage() {
           <div className="modal-overlay">
             <div className="modal-content" onClick={e => e.stopPropagation()}>
               <MedicalActForm
+                key={`add-act-${newActPatientId || 'new'}`}
                 defaultPatientId={newActPatientId || undefined}
                 initialStep={newActPatientId ? 2 : 1}
                 onSuccess={() => {

@@ -276,23 +276,14 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit, defaultPatien
       setErrors({});
       setSubmitted(false);
       setSearchQuery('');
-      setSelectedFamily('');
-      setSelectedDrug('');
-      setTreatmentDetails({ duration: '', dosage: '', frequency: '' });
-    } else {
-      setForm({
-        ...EMPTY_FORM,
-        ...(defaultPatientId ? { patientId: defaultPatientId } : {}),
-      });
-      setStep(defaultPatientId ? Math.max(resolvedInitialStep, 2) : 1);
+    } else if (!defaultPatientId) {
+      setForm(EMPTY_FORM);
+      setStep(1);
       setErrors({});
       setSubmitted(false);
       setSearchQuery('');
-      setSelectedFamily('');
-      setSelectedDrug('');
-      setTreatmentDetails({ duration: '', dosage: '', frequency: '' });
     }
-  }, [initialData, isEdit, defaultPatientId, resolvedInitialStep]);
+  }, [initialData, isEdit, defaultPatientId]);
 
   useEffect(() => {
     if (!defaultPatientId || isEdit) return undefined;
@@ -369,7 +360,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit, defaultPatien
       if (q) params.q = q;
       const res = await getPatients(params);
       let list = res.data || [];
-      if (form.patientId && !list.some((p) => p.id === form.patientId)) {
+      if (form.patientId && !list.some((p) => p.id == form.patientId)) {
         try {
           const selected = await getPatient(form.patientId);
           if (selected.data) list = [selected.data, ...list];
@@ -751,6 +742,13 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit, defaultPatien
               <span>Sélectionner le patient</span>
             </div>
 
+            {form.patientName && (
+              <div className="maf-selected-patient-banner">
+                <FiUser className="maf-banner-icon" />
+                <span>{form.patientName}</span>
+              </div>
+            )}
+
             {/* Patient Search */}
             <div className="maf-field">
               <label className="maf-label">
@@ -786,7 +784,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit, defaultPatien
                     return (
                       <div
                         style={style}
-                        className={`maf-patient-card ${form.patientId === p.id ? 'selected' : ''}`}
+                        className={`maf-patient-card ${form.patientId == p.id ? 'selected' : ''}`}
                         onClick={() => selectPatient(p)}
                       >
                         <div className="maf-patient-avatar">
@@ -798,7 +796,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit, defaultPatien
                             {p.ipp ? `IPP: ${p.ipp}` : 'Sans IPP'} • {p.age || '?'} ans
                           </span>
                         </div>
-                        {form.patientId === p.id && (
+                        {form.patientId == p.id && (
                           <div className="maf-patient-check">
                             <FiCheck />
                           </div>

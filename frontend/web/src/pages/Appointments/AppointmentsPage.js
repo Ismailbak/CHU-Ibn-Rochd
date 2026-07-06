@@ -87,7 +87,8 @@ const APPOINTMENTS_PER_PAGE = 7;
 
 function AppointmentsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [newAppointmentPatientId, setNewAppointmentPatientId] = useState(null);
+  const urlPrefillPatientId = searchParams.get('new') === '1' ? searchParams.get('patientId') : null;
+  const [newAppointmentPatientId, setNewAppointmentPatientId] = useState(urlPrefillPatientId);
 
   // State for selected day insights modal
   const [insightsModal, setInsightsModal] = useState({ open: false, date: null, appointments: [] });
@@ -120,13 +121,10 @@ function AppointmentsPage() {
   const rdvWeek = stats.week;
   const confirmedThisMonth = stats.confirmedMonth;
   const pending = stats.pending;
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(Boolean(urlPrefillPatientId));
 
   useEffect(() => {
-    const patientId = searchParams.get('patientId');
-    if (searchParams.get('new') === '1' && patientId) {
-      setNewAppointmentPatientId(patientId);
-      setShowAddModal(true);
+    if (searchParams.get('new') === '1' && searchParams.get('patientId')) {
       const next = new URLSearchParams(searchParams);
       next.delete('patientId');
       next.delete('new');
@@ -688,6 +686,7 @@ function AppointmentsPage() {
           <div className="modal-overlay">
             <div className="modal-content" onClick={e => e.stopPropagation()}>
               <AppointmentForm
+                key={`add-rdv-${newAppointmentPatientId || 'new'}`}
                 defaultDate={selectedDate.toISOString().split('T')[0]}
                 defaultPatientId={newAppointmentPatientId || undefined}
                 initialStep={newAppointmentPatientId ? 2 : 1}
