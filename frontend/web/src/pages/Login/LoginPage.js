@@ -29,6 +29,7 @@ function LoginPage() {
         first_name: userProfile.first_name || userProfile.firstName || '',
         last_name: userProfile.last_name || userProfile.lastName || '',
         specialty: userProfile.specialty || '',
+        gender: userProfile.gender || '',
       };
       localStorage.setItem('user', JSON.stringify(enrichedUser));
       if (rememberMe) {

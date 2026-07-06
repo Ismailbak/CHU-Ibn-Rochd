@@ -16,6 +16,7 @@ function SignupPage() {
     lastName: '',
     email: '',
     phone: '',
+    gender: '',
     specialty: 'rhumatologie',
     department: '',
     password: '',
@@ -51,9 +52,17 @@ function SignupPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleGenderChange = (value) => {
+    setFormData(prev => ({ ...prev, gender: value }));
+  };
+
   const validateStep1 = () => {
     if (!formData.firstName || !formData.lastName) {
       setError('Veuillez remplir tous les champs obligatoires');
+      return false;
+    }
+    if (!formData.gender) {
+      setError('Veuillez sélectionner votre civilité');
       return false;
     }
     if (!formData.email.includes('@')) {
@@ -104,6 +113,7 @@ function SignupPage() {
         first_name: formData.firstName,
         last_name: formData.lastName,
         phone: formData.phone,
+        gender: formData.gender,
         specialty: formData.specialty,
         department: formData.department,
         role: specialtyToRole(formData.specialty),
@@ -307,6 +317,31 @@ function SignupPage() {
                   </div>
                 </div>
 
+                <div className="form-group">
+                  <span className="form-label">Civilité *</span>
+                  <div className="gender-options" role="radiogroup" aria-label="Civilité">
+                    <label className={`gender-option ${formData.gender === 'F' ? 'selected' : ''}`}>
+                      <input
+                        type="radio"
+                        name="gender"
+                        value="F"
+                        checked={formData.gender === 'F'}
+                        onChange={() => handleGenderChange('F')}
+                      />
+                      <span>Mme.</span>
+                    </label>
+                    <label className={`gender-option ${formData.gender === 'M' ? 'selected' : ''}`}>
+                      <input
+                        type="radio"
+                        name="gender"
+                        value="M"
+                        checked={formData.gender === 'M'}
+                        onChange={() => handleGenderChange('M')}
+                      />
+                      <span>M.</span>
+                    </label>
+                  </div>
+                </div>
 
                 <div className="form-group">
                   <label htmlFor="specialty">Rôle / Spécialité</label>

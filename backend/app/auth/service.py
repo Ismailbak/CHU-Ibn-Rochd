@@ -58,6 +58,7 @@ def create_user(
     specialty: str = None,
     phone: str = None,
     department: str = None,
+    gender: str = None,
 ):
     hashed = hash_password(password)
     user = User(
@@ -71,6 +72,7 @@ def create_user(
         specialty=specialty,
         phone=phone,
         department=department,
+        gender=gender,
     )
     db.add(user)
     db.commit()

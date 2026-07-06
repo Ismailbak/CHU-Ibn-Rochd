@@ -47,6 +47,7 @@ function ProfilePage() {
           hospital: user.hospital || '',
           role: user.role || '',
           is_admin: user.is_admin || false,
+          gender: user.gender || '',
         });
         
         // Set profile picture if exists
@@ -95,6 +96,7 @@ function ProfilePage() {
         specialty: profile.specialty,
         role: profile.role,
         is_admin: profile.is_admin,
+        gender: profile.gender,
       })
     : '';
   const profileBadge = profile

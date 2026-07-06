@@ -4,7 +4,7 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from jose import jwt
-from typing import Optional
+from typing import Optional, Literal
 from datetime import datetime, timedelta
 from app.core.config import settings
 from app.core.database import get_db
@@ -88,6 +88,7 @@ class SignupRequest(BaseModel):
     specialty: str | None = None
     phone: str | None = None
     department: str | None = None
+    gender: Literal["M", "F"]
 
 
 @router.post("/login", response_model=Token)
@@ -164,6 +165,7 @@ def signup(data: SignupRequest, db: Session = Depends(get_db)):
         specialty=data.specialty,
         phone=data.phone,
         department=data.department,
+        gender=data.gender,
     )
     return {
         "id": user.id,
@@ -175,6 +177,7 @@ def signup(data: SignupRequest, db: Session = Depends(get_db)):
         "specialty": user.specialty,
         "phone": user.phone,
         "department": user.department,
+        "gender": user.gender,
         "message": "Account created",
     }
 
@@ -194,6 +197,7 @@ def get_current_user(current_user: User = Depends(get_current_user_orm)):
             "specialty": current_user.specialty,
             "phone": current_user.phone,
             "department": current_user.department,
+            "gender": current_user.gender,
             "profile_picture": current_user.profile_picture,
         }
     }

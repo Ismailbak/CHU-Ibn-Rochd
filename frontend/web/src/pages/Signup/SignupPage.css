@@ -65,6 +65,54 @@
   gap: 15px;
 }
 
+.form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.gender-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.gender-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  background: white;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  color: #374151;
+  transition: all 0.2s ease;
+}
+
+.gender-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.gender-option:hover {
+  border-color: #93C5FD;
+  background: #F8FAFC;
+}
+
+.gender-option.selected {
+  border-color: #3B82F6;
+  background: #EFF6FF;
+  color: #1D4ED8;
+  box-shadow: 0 0 0 1px #3B82F6;
+}
+
 /* Select */
 .form-group select {
   width: 100%;
