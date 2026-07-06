@@ -1,5 +1,6 @@
 from app.patients.service import PatientService
 from app.core.utils.preprocessing import clean_text, anonymize_text
+from app.core.utils.text_encoding import repair_utf8_mojibake
 
 
 def anonymize_patient_data(data):
@@ -23,3 +24,12 @@ def test_anonymize_text():
     result = anonymize_text(text)
     assert "[EMAIL]" in result
     assert "[PHONE]" in result
+
+
+def test_repair_utf8_mojibake():
+    correct = "séropositive"
+    latin1_garbled = correct.encode("utf-8").decode("latin1")
+    cp437_garbled = correct.encode("utf-8").decode("cp437")
+    assert repair_utf8_mojibake(latin1_garbled) == correct
+    assert repair_utf8_mojibake(cp437_garbled) == correct
+    assert repair_utf8_mojibake(correct) == correct

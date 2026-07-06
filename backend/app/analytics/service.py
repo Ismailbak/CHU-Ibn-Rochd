@@ -5,6 +5,7 @@ from dateutil.relativedelta import relativedelta
 from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
+from app.core.utils.text_encoding import repair_utf8_mojibake
 from app.models.appointment import Appointment
 from app.models.medical_act import ActDiagnosis, ActTreatment, MedicalAct
 from app.models.patient import Patient
@@ -28,7 +29,11 @@ def get_top_act_diagnoses(
     if limit is not None:
         q = q.limit(limit)
     rows = q.all()
-    return [{"name": label, "count": count} for label, count in rows if label and str(label).strip()]
+    return [
+        {"name": repair_utf8_mojibake(label), "count": count}
+        for label, count in rows
+        if label and str(label).strip()
+    ]
 
 def calculate_age(date_of_birth):
     """Calculate age from date of birth."""

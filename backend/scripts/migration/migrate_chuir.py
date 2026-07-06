@@ -74,7 +74,9 @@ def fix_text(value) -> str | None:
             return value.decode("utf-8")
         except UnicodeDecodeError:
             return value.decode("latin1", errors="replace")
-    return str(value)
+    from app.core.utils.text_encoding import repair_utf8_mojibake
+
+    return repair_utf8_mojibake(str(value))
 
 
 def clean_str(value, maxlen=None):
