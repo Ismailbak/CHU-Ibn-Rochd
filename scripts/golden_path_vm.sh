@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Golden-path smoke test — run ON the app VM (4020) as ismailbak
-# Usage: bash /opt/ia-medical/scripts/golden_path_vm.sh [BASE_URL] [USER] [PASS]
+# Usage: bash scripts/golden_path_vm.sh [BASE_URL] [APP_USERNAME] [APP_PASSWORD]
+# APP_USERNAME is the web login (usually email), NOT the Linux SSH user.
 set -euo pipefail
 
 BASE_URL="${1:-http://127.0.0.1:8000}"
@@ -63,12 +64,17 @@ fi
 if [ -z "$PASS" ]; then
   skip "API write tests (set password: golden_path_vm.sh URL user pass)"
 else
-  TOKEN=$(curl -sf -X POST "$BASE_URL/api/auth/login" \
+  LOGIN_RESP=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/auth/login" \
     -H "Content-Type: application/x-www-form-urlencoded" \
-    -d "username=$USER&password=$PASS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null || true)
+    -d "username=$USER&password=$PASS")
+  LOGIN_HTTP=$(echo "$LOGIN_RESP" | tail -n1)
+  LOGIN_BODY=$(echo "$LOGIN_RESP" | sed '$d')
+  TOKEN=$(echo "$LOGIN_BODY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null || true)
 
   if [ -z "$TOKEN" ]; then
-    fail "Login as $USER"
+    fail "Login as $USER (HTTP $LOGIN_HTTP)"
+    echo "       Tip: use your web app email (e.g. admin@chu.ma), not Linux user ismailbak"
+    echo "       Response: $LOGIN_BODY"
   else
     pass "Login as $USER"
     AUTH="Authorization: Bearer $TOKEN"
