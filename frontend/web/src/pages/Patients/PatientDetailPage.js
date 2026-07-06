@@ -576,8 +576,8 @@ function PatientDetailPage() {
 
       {/* Edit Modal */}
       {showEditModal && (
-        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-overlay">
+          <div className="modal-content">
             <PatientForm 
               initialData={patient} 
               isEdit={true} 
@@ -590,8 +590,8 @@ function PatientDetailPage() {
 
       {/* Lab Result Modal */}
       {showLabResultModal && (
-        <div className="modal-overlay" onClick={() => setShowLabResultModal(false)}>
-          <div className="modal-content lab-result-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-overlay">
+          <div className="modal-content lab-result-modal">
             <LabResultForm
               patientId={patient.id}
               onSuccess={() => {
@@ -606,8 +606,8 @@ function PatientDetailPage() {
 
       {/* Treatment Modal */}
       {showTreatmentModal && (
-        <div className="modal-overlay" onClick={() => setShowTreatmentModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-overlay">
+          <div className="modal-content">
             <PatientTreatmentForm
               patientId={patient.id}
               onSuccess={() => {

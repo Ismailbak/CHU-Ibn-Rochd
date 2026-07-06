@@ -15,15 +15,12 @@
 .cnm-panel {
   width: min(680px, 100%);
   max-height: 90vh;
-  overflow: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   background: #fff;
   border-radius: 20px;
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-  scrollbar-width: none;
-}
-
-.cnm-panel::-webkit-scrollbar {
-  display: none;
 }
 
 .cnm-header {
@@ -33,6 +30,7 @@
   gap: 16px;
   padding: 24px 28px 20px;
   border-bottom: 1px solid #E5E7EB;
+  flex-shrink: 0;
 }
 
 .cnm-header-left {
@@ -96,6 +94,15 @@
   flex-direction: column;
   gap: 20px;
   padding: 24px 28px 28px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.cnm-form::-webkit-scrollbar {
+  display: none;
 }
 
 .cnm-field {

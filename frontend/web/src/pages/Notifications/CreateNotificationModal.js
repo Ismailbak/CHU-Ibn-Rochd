@@ -75,8 +75,8 @@ const CreateNotificationModal = ({ isOpen, onClose, onCreated, onError }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="cnm-overlay" onClick={onClose}>
-      <div className="cnm-panel" onClick={(e) => e.stopPropagation()}>
+    <div className="cnm-overlay">
+      <div className="cnm-panel">
         <div className="cnm-header">
           <div className="cnm-header-left">
             <div className="cnm-header-icon">

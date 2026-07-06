@@ -2,11 +2,21 @@
 
 .lrf-wrapper {
     max-width: 100%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
 }
 
 .lrf-form {
-    max-height: calc(90vh - 120px);
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.lrf-form::-webkit-scrollbar {
+    display: none;
 }
 
 .lrf-grid-2 {
