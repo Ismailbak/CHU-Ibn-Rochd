@@ -1,11 +1,24 @@
 """
-Strict patient auto-detection for RAG (IPP exact match, optional full-name unique match).
+Strict patient auto-detection for RAG (IPP exact match, unique full-name match).
+
+Name resolution strategy (precision-first — never guess between multiple patients):
+1. IPP exact match.
+2. Sliding windows of 2..MAX_NAME_TOKENS consecutive name tokens, largest first.
+   Each window is split at every position into (first_name, last_name) candidates,
+   in both orders, so compound names of any length work:
+   "Mohammed Ben Ali Alami" -> (mohammed | ben ali alami), (mohammed ben | ali alami), ...
+   Matching is tiered per window: exact SQL -> accent/hyphen-insensitive -> particle-stripped
+   (only when the query omits surname particles like El/Ben).
+3. Surname-only fallback ("patiente El Amrani") when the query mentions patient(e).
+4. Single-token fallback ("patiente Amrani") when the query mentions patient(e).
+A unique match is required at every step; multiple candidates produce a warning.
 """
 
 import re
 import logging
 import unicodedata
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
+
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
@@ -19,11 +32,25 @@ IPP_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# Tokens allowing internal hyphens/apostrophes: "jean-pierre", "n'diaye"
+NAME_TOKEN_PATTERN = re.compile(r"[^\W\d_]+(?:[-'’][^\W\d_]+)*", re.UNICODE)
+
+CAPITALIZED_NAME_WORD = re.compile(
+    r"[A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]*(?:[-'][A-ZÀ-ÖÙ-Ý][a-zà-öù-ÿ]+)*",
+    re.UNICODE,
+)
+
+PATIENT_KEYWORDS = {"patient", "patiente", "patients", "patientes"}
+PREPOSITIONS = {"de", "du", "des"}
+
+MAX_NAME_TOKENS = 6
+
 NAME_STOPWORDS = {
     "what", "can", "you", "tell", "me", "about", "the", "patient", "patiente",
+    "patients", "patientes",
     "who", "is", "of", "a", "an", "in", "on", "for", "with", "happened", "to",
-    "hey", "bonjour", "salut", "svp", "please", "que", "peux", "tu", "dire",
-    "moi", "sur", "le", "la", "du", "de", "des", "un", "une", "et", "ou",
+    "hey", "bonjour", "bonsoir", "salut", "svp", "please", "que", "peux", "tu",
+    "dire", "moi", "sur", "le", "la", "du", "de", "des", "un", "une", "et", "ou",
     "veuillez", "fournir", "dossier", "dossiers", "medical", "medicaux",
     "médical", "médicaux", "donnee", "donnees", "donnée", "données",
     "clinique", "cliniques", "pour", "puisse", "pouvoir", "decrire",
@@ -36,9 +63,23 @@ NAME_STOPWORDS = {
     "resume", "résume", "resumer", "résumer", "resumez", "résumez",
     "montre", "montrer", "montrez", "affiche", "afficher", "affichez",
     "situation", "bilan",
-    "presenter", "présenter", "parle", "parler", "donne", "donner",
+    "presenter", "présenter", "parle", "parler", "donne", "donner", "donnez",
+    "monsieur", "madame", "mademoiselle", "mme", "mlle", "mr",
+    "docteur", "dr", "professeur", "pr",
+    "merci", "voir", "s'il", "sil", "plait", "plaît", "stp",
+    "ce", "cet", "cette", "ces", "quel", "quelle", "quels", "quelles",
+    "est", "sont", "avec", "chez", "nous", "vous", "votre", "vos",
+    "notre", "nos", "mon", "ma", "mes", "concernant", "propos",
+    "traitement", "traitements", "ordonnance", "ordonnances",
+    "analyses", "resultats", "résultats", "rendez-vous",
+    "aujourd'hui", "hier", "demain", "qui", "quoi", "comment",
+    "historique", "liste", "dernier", "derniere", "dernière",
+    "pourriez", "pourrions", "pourrait", "résumer", "resumer",
 }
 
+CAPITALIZED_SENTENCE_STARTERS = {
+    "pourriez", "veuillez", "merci", "bonjour", "bonsoir", "salut",
+}
 
 NAME_PARTICLES = {
     "el", "al", "de", "du", "des", "ben", "bel", "ibn", "bin", "bint",
@@ -84,66 +125,369 @@ def detect_patient_from_query(
             warnings.append(f"Patient with IPP '{ipp_value}' not found.")
         return None, warnings, None
 
-    tokens = _extract_name_tokens(query)
-    if len(tokens) >= 2 and re.search(r"\bpatiente?\b", query, re.IGNORECASE):
-        token_matches = _find_patients_by_name_tokens(db, tokens)
-        if len(token_matches) == 1:
-            patient = token_matches[0]
+    token_lists, has_keyword = _candidate_token_lists(query)
+
+    for tokens in token_lists:
+        if len(tokens) < 2:
+            continue
+        patient, ambiguous = _search_name_windows(db, tokens)
+        if patient is not None:
             return patient.id, warnings, _patient_display_name(patient)
-        if len(token_matches) > 1:
+        if ambiguous:
             warnings.append("Multiple patients matched the provided name. Please specify IPP.")
             return None, warnings, None
 
-    candidate_pairs = _rank_name_pairs(_extract_name_pairs(query))
-    if candidate_pairs:
-        best_matches: List[Patient] = []
-        best_score = -1
-        for first_t, last_t in candidate_pairs:
-            score = _pair_specificity(first_t, last_t)
-            matches = _find_patients_by_name_pair(db, first_t, last_t)
-            if matches and score > best_score:
-                best_score = score
-                best_matches = matches
+    if has_keyword:
+        for tokens in token_lists:
+            if 2 <= len(tokens) <= 3:
+                surname_matches = _find_patients_by_full_surname(db, tokens)
+                if len(surname_matches) == 1:
+                    patient = surname_matches[0]
+                    return patient.id, warnings, _patient_display_name(patient)
+                if len(surname_matches) > 1:
+                    warnings.append(
+                        "Multiple patients matched the provided name. Please specify IPP."
+                    )
+                    return None, warnings, None
 
-        if len(best_matches) == 1:
-            patient = best_matches[0]
-            return patient.id, warnings, _patient_display_name(patient)
-        if len(best_matches) > 1:
-            warnings.append("Multiple patients matched the provided name. Please specify IPP.")
-            return None, warnings, None
-
-        # Compound surname alone ("... El Amrani") — always constrain by first name
-        if len(tokens) >= 2:
-            last_combo = " ".join(tokens[1:])
-            combo_matches = (
-                db.query(Patient)
-                .filter(
-                    Patient.first_name.ilike(tokens[0]),
-                    Patient.last_name.ilike(last_combo),
-                )
-                .all()
-            )
-            if len(combo_matches) == 1:
-                patient = combo_matches[0]
-                return patient.id, warnings, _patient_display_name(patient)
-            if len(combo_matches) > 1:
-                warnings.append("Multiple patients matched the provided name. Please specify IPP.")
-                return None, warnings, None
-
-        return None, warnings, None
-
-    # Lone name after "patient(e)" (e.g. "patiente Amrani") — accept only a unique match
-    if len(tokens) == 1 and re.search(r"\bpatiente?\b", query, re.IGNORECASE):
-        single_matches = _find_patients_by_single_token(db, tokens[0])
-        if len(single_matches) == 1:
-            patient = single_matches[0]
-            return patient.id, warnings, _patient_display_name(patient)
-        if len(single_matches) > 1:
-            warnings.append("Multiple patients matched the provided name. Please specify IPP.")
-        return None, warnings, None
+        for tokens in token_lists:
+            if len(tokens) == 1:
+                single_matches = _find_patients_by_single_token(db, tokens[0])
+                if len(single_matches) == 1:
+                    patient = single_matches[0]
+                    return patient.id, warnings, _patient_display_name(patient)
+                if len(single_matches) > 1:
+                    warnings.append(
+                        "Multiple patients matched the provided name. Please specify IPP."
+                    )
+                    return None, warnings, None
 
     return None, warnings, None
 
+
+def detect_patient_from_texts(
+    db: Session, texts: List[str]
+) -> Tuple[Optional[int], List[str], Optional[str]]:
+    """Try to resolve a patient from one or more prior user messages."""
+    warnings: List[str] = []
+    matches_by_id = {}
+    for text in texts:
+        if not text or not text.strip():
+            continue
+        pid, text_warnings, name = detect_patient_from_query(db, text)
+        warnings.extend(text_warnings)
+        if pid:
+            matches_by_id[pid] = name
+
+    if len(matches_by_id) == 1:
+        pid = next(iter(matches_by_id))
+        return pid, warnings, matches_by_id[pid]
+    if len(matches_by_id) > 1:
+        warnings.append("Multiple patients matched the conversation history. Please specify IPP.")
+    return None, warnings, None
+
+
+# ---------------------------------------------------------------------------
+# Token extraction
+# ---------------------------------------------------------------------------
+
+def _candidate_token_lists(query: str) -> Tuple[List[List[str]], bool]:
+    """
+    Return prioritized token lists to search, plus whether patient(e) was mentioned.
+
+    Priority:
+    1. Tokens right after "patient(e)".
+    2. Tokens after a preposition (de/du/des/d').
+    3. Capitalized name sequences (handles "qui est Ahmed Ben Ali").
+    4. All non-stopword tokens when the span looks name-like.
+    """
+    raw = NAME_TOKEN_PATTERN.findall(query)
+    lower = [t.lower() for t in raw]
+
+    keyword_index = next(
+        (i for i, t in enumerate(lower) if t in PATIENT_KEYWORDS), None
+    )
+    has_keyword = keyword_index is not None
+
+    lists: List[List[str]] = []
+
+    def append_unique(span: List[str]) -> None:
+        trimmed = span[:MAX_NAME_TOKENS]
+        if len(trimmed) >= 2 and trimmed not in lists:
+            lists.append(trimmed)
+
+    if keyword_index is not None:
+        after = [
+            t
+            for t in lower[keyword_index + 1 : keyword_index + 1 + MAX_NAME_TOKENS + 2]
+            if t not in NAME_STOPWORDS
+        ]
+        append_unique(after)
+
+    for span in _preposition_token_lists(lower):
+        append_unique(span)
+
+    for span in _capitalized_token_lists(query):
+        append_unique(span)
+
+    filtered_all = [t for t in lower if t not in NAME_STOPWORDS][:MAX_NAME_TOKENS + 4]
+    if _looks_like_name_span(filtered_all) and filtered_all not in lists:
+        lists.append(filtered_all[:MAX_NAME_TOKENS])
+
+    return lists, has_keyword
+
+
+def _take_name_tokens(lower: List[str], start: int, limit: int = MAX_NAME_TOKENS) -> List[str]:
+    span: List[str] = []
+    for token in lower[start : start + limit + 2]:
+        if token in NAME_STOPWORDS or token in PATIENT_KEYWORDS:
+            break
+        span.append(token)
+        if len(span) >= limit:
+            break
+    return span
+
+
+def _preposition_token_lists(lower: List[str]) -> List[List[str]]:
+    """Extract name spans after de/du/des or d'Ahmed-style tokens."""
+    lists: List[List[str]] = []
+    for index, token in enumerate(lower):
+        if token in PREPOSITIONS:
+            span = _take_name_tokens(lower, index + 1)
+            if len(span) >= 2:
+                lists.append(span)
+        elif token.startswith("d'") and len(token) > 2:
+            span = [token[2:]] + _take_name_tokens(lower, index + 1, limit=MAX_NAME_TOKENS - 1)
+            if len(span) >= 2:
+                lists.append(span[:MAX_NAME_TOKENS])
+    return lists
+
+
+def _capitalized_token_lists(query: str) -> List[List[str]]:
+    """Extract sequences of capitalized words (typical proper names in French prose)."""
+    words = CAPITALIZED_NAME_WORD.findall(query)
+    if len(words) < 2:
+        return []
+
+    lower_words = [w.lower() for w in words]
+    clean = [
+        w for w in lower_words
+        if w not in NAME_STOPWORDS
+        and w not in PATIENT_KEYWORDS
+        and w not in CAPITALIZED_SENTENCE_STARTERS
+    ]
+    if len(clean) >= 2:
+        return [clean[:MAX_NAME_TOKENS]]
+    return []
+
+
+def _looks_like_name_span(tokens: List[str]) -> bool:
+    """Heuristic: at least two tokens and one substantial name fragment."""
+    if len(tokens) < 2:
+        return False
+    substantial = [t for t in tokens if len(re.split(r"[-'’]", t)[-1]) >= 3]
+    return len(substantial) >= 2
+
+
+# ---------------------------------------------------------------------------
+# Window/split search
+# ---------------------------------------------------------------------------
+
+def _search_name_windows(
+    db: Session, tokens: List[str]
+) -> Tuple[Optional[Patient], bool]:
+    """
+    Slide windows of consecutive tokens (largest first) and match each window
+    against patient names. Returns (patient, ambiguous).
+    """
+    max_size = min(len(tokens), MAX_NAME_TOKENS)
+    for size in range(max_size, 1, -1):
+        found: Dict[int, Patient] = {}
+        for start in range(len(tokens) - size + 1):
+            window = tokens[start : start + size]
+            for patient in _find_patients_by_name_tokens(db, window):
+                found[patient.id] = patient
+        if len(found) == 1:
+            return next(iter(found.values())), False
+        if len(found) > 1:
+            return None, True
+    return None, False
+
+
+def _name_token_splits(tokens: List[str]) -> List[Tuple[str, str]]:
+    """All (first_name, last_name) splits of a token window, e.g. 4 tokens -> 3 splits."""
+    return [
+        (" ".join(tokens[:index]), " ".join(tokens[index:]))
+        for index in range(1, len(tokens))
+    ]
+
+
+def _sql_name_variants(name: str) -> List[str]:
+    """Return SQL ILIKE variants (hyphen/apostrophe <-> space)."""
+    variants = [name]
+    spaced = re.sub(r"[-'’]", " ", name)
+    spaced = re.sub(r"\s+", " ", spaced).strip()
+    if spaced and spaced not in variants:
+        variants.append(spaced)
+    return variants
+
+
+def _last_name_has_leading_particle(last_norm: str) -> bool:
+    parts = last_norm.split()
+    return bool(parts and parts[0] in NAME_PARTICLES)
+
+
+def _find_patients_by_name_tokens(db: Session, tokens: List[str]) -> List[Patient]:
+    """
+    Tiered matching of a token window against (first_name, last_name), both orders:
+    1. Exact ILIKE (with hyphen/space variants).
+    2. Accent/hyphen-insensitive equality.
+    3. Particle-stripped surname equality — only when the query omits particles
+       (e.g. query "Fatima Amrani" may match DB "El Amrani", but "Fatima El Amrani" won't).
+    """
+    if len(tokens) < 2:
+        return []
+
+    splits = _name_token_splits(tokens)
+    matched: Dict[int, Patient] = {}
+
+    for first_raw, last_raw in splits:
+        for first_v in _sql_name_variants(first_raw):
+            for last_v in _sql_name_variants(last_raw):
+                rows = (
+                    db.query(Patient)
+                    .filter(
+                        or_(
+                            (
+                                Patient.first_name.ilike(first_v)
+                                & Patient.last_name.ilike(last_v)
+                            ),
+                            (
+                                Patient.first_name.ilike(last_v)
+                                & Patient.last_name.ilike(first_v)
+                            ),
+                        )
+                    )
+                    .all()
+                )
+                for patient in rows:
+                    matched[patient.id] = patient
+    if matched:
+        return list(matched.values())
+
+    candidates = _fuzzy_candidates(db, tokens)
+    if not candidates:
+        return []
+
+    norm_splits = [
+        (_normalize_person_name(first), _normalize_person_name(last))
+        for first, last in splits
+    ]
+
+    for patient in candidates:
+        pf = _normalize_person_name(patient.first_name or "")
+        pl = _normalize_person_name(patient.last_name or "")
+        for nf, nl in norm_splits:
+            if (pf == nf and pl == nl) or (pf == nl and pl == nf):
+                matched[patient.id] = patient
+                break
+    if matched:
+        return list(matched.values())
+
+    query_uses_particle = any(_last_name_has_leading_particle(nl) for _, nl in norm_splits)
+    if query_uses_particle:
+        return []
+
+    for patient in candidates:
+        pf = _normalize_person_name(patient.first_name or "")
+        pl = _strip_name_particles(_normalize_person_name(patient.last_name or ""))
+        if not pl:
+            continue
+        for nf, nl in norm_splits:
+            stripped_nl = _strip_name_particles(nl)
+            if not stripped_nl:
+                continue
+            if pf == nf and pl == stripped_nl:
+                matched[patient.id] = patient
+                break
+    return list(matched.values())
+
+
+def _fuzzy_candidates(db: Session, tokens: List[str]) -> List[Patient]:
+    """Narrow candidate set for Python-side comparison."""
+    last_segment = re.split(r"[-'’]", tokens[-1])[-1]
+    first_segment = re.split(r"[-'’]", tokens[0])[-1]
+    segment = last_segment if len(last_segment) >= 3 else first_segment
+    if len(segment) < 3:
+        return []
+
+    query = db.query(Patient).filter(
+        or_(
+            Patient.last_name.ilike(f"%{segment}%"),
+            Patient.first_name.ilike(f"%{segment}%"),
+        )
+    )
+    if len(first_segment) >= 3:
+        query = query.filter(
+            or_(
+                Patient.first_name.ilike(tokens[0]),
+                Patient.first_name.ilike(f"%{first_segment}%"),
+            )
+        )
+    return query.limit(500).all()
+
+
+# ---------------------------------------------------------------------------
+# Keyword-anchored fallbacks
+# ---------------------------------------------------------------------------
+
+def _find_patients_by_full_surname(db: Session, tokens: List[str]) -> List[Patient]:
+    """Whole token sequence as a surname or first name ("patiente El Amrani")."""
+    joined = " ".join(tokens)
+    rows = (
+        db.query(Patient)
+        .filter(
+            or_(
+                Patient.last_name.ilike(joined),
+                Patient.first_name.ilike(joined),
+            )
+        )
+        .limit(5)
+        .all()
+    )
+    if rows:
+        return rows
+
+    normalized = _normalize_person_name(joined)
+    matched: Dict[int, Patient] = {}
+    for patient in _fuzzy_candidates(db, tokens):
+        pl = _normalize_person_name(patient.last_name or "")
+        pf = _normalize_person_name(patient.first_name or "")
+        if normalized in (pl, pf):
+            matched[patient.id] = patient
+    return list(matched.values())
+
+
+def _find_patients_by_single_token(db: Session, token: str) -> List[Patient]:
+    """Match a lone name token against first or last name (incl. compound last names)."""
+    if len(token) < 3:
+        return []
+    variants = _sql_name_variants(token)
+    filters = []
+    for variant in variants:
+        filters.extend([
+            Patient.first_name.ilike(variant),
+            Patient.last_name.ilike(variant),
+            Patient.last_name.ilike(f"% {variant}"),
+            Patient.last_name.ilike(f"{variant} %"),
+        ])
+    matches = db.query(Patient).filter(or_(*filters)).limit(5).all()
+    return matches
+
+
+# ---------------------------------------------------------------------------
+# Normalization helpers
+# ---------------------------------------------------------------------------
 
 def _patient_display_name(patient: Patient) -> str:
     parts = []
@@ -173,13 +517,11 @@ def _strip_accents(value: str) -> str:
     return "".join(ch for ch in normalized if unicodedata.category(ch) != "Mn")
 
 
-def _normalize_name_token(value: str) -> str:
-    return _strip_accents(value).lower().strip()
-
-
 def _normalize_person_name(value: str) -> str:
-    cleaned = re.sub(r"\s+", " ", _normalize_name_token(value))
-    return cleaned.strip()
+    """Lowercase, accent-free, hyphens/apostrophes treated as spaces."""
+    lowered = _strip_accents(value).lower()
+    lowered = re.sub(r"[-'’]", " ", lowered)
+    return re.sub(r"\s+", " ", lowered).strip()
 
 
 def _strip_name_particles(name: str) -> str:
@@ -187,245 +529,3 @@ def _strip_name_particles(name: str) -> str:
     while parts and parts[0] in NAME_PARTICLES:
         parts = parts[1:]
     return " ".join(parts)
-
-
-def _last_names_compatible(query_last: str, db_last: str) -> bool:
-    if query_last == db_last:
-        return True
-
-    query_parts = query_last.split()
-    db_parts = db_last.split()
-    query_has_particle = bool(query_parts and query_parts[0] in NAME_PARTICLES)
-    db_has_particle = bool(db_parts and db_parts[0] in NAME_PARTICLES)
-
-    # Query includes a particle ("el amrani") — require full compound, not "amrani" alone
-    if query_has_particle:
-        return False
-
-    # Query without particle can match DB compound surname ("Amrani" → "El Amrani")
-    if db_has_particle:
-        return query_last == _strip_name_particles(db_last)
-
-    if db_last.endswith(f" {query_last}") or query_last.endswith(f" {db_last}"):
-        return True
-
-    stripped_query = _strip_name_particles(query_last)
-    stripped_db = _strip_name_particles(db_last)
-    return bool(stripped_query and stripped_db and stripped_query == stripped_db)
-
-
-def _name_token_splits(tokens: List[str]) -> List[Tuple[str, str]]:
-    """Build first/last splits for compound Moroccan names."""
-    splits: List[Tuple[str, str]] = []
-    if len(tokens) >= 2:
-        splits.append((tokens[0], " ".join(tokens[1:])))
-    if len(tokens) >= 3:
-        splits.append((f"{tokens[0]} {tokens[1]}", " ".join(tokens[2:])))
-    seen = set()
-    unique: List[Tuple[str, str]] = []
-    for pair in splits:
-        if pair not in seen:
-            seen.add(pair)
-            unique.append(pair)
-    return unique
-
-
-def _find_patients_by_name_tokens(db: Session, tokens: List[str]) -> List[Patient]:
-    """Match first token(s) to first_name and remaining tokens to last_name (compound-safe)."""
-    if len(tokens) < 2:
-        return []
-
-    matched_by_id: dict[int, Patient] = {}
-    for first_raw, last_raw in _name_token_splits(tokens):
-        exact = (
-            db.query(Patient)
-            .filter(
-                Patient.first_name.ilike(first_raw),
-                Patient.last_name.ilike(last_raw),
-            )
-            .all()
-        )
-        for patient in exact:
-            matched_by_id[patient.id] = patient
-
-    if matched_by_id:
-        return list(matched_by_id.values())
-
-    last_token = tokens[-1]
-    if len(last_token) < 3:
-        return []
-
-    nf = _normalize_person_name(tokens[0])
-    nl = _normalize_person_name(" ".join(tokens[1:]))
-    alt_first = (
-        _normalize_person_name(f"{tokens[0]} {tokens[1]}")
-        if len(tokens) >= 3
-        else None
-    )
-    alt_last = (
-        _normalize_person_name(" ".join(tokens[2:]))
-        if len(tokens) >= 3
-        else None
-    )
-
-    candidates = (
-        db.query(Patient)
-        .filter(Patient.last_name.ilike(f"%{last_token}%"))
-        .all()
-    )
-    for patient in candidates:
-        pf = _normalize_person_name(patient.first_name or "")
-        pl = _normalize_person_name(patient.last_name or "")
-        if pf == nf and pl == nl:
-            matched_by_id[patient.id] = patient
-        elif alt_first and alt_last and pf == alt_first and pl == alt_last:
-            matched_by_id[patient.id] = patient
-
-    return list(matched_by_id.values())
-
-
-def _find_patients_by_name_pair(db: Session, first_t: str, last_t: str) -> List[Patient]:
-    """Exact ilike match, then accent-insensitive fallback on a narrowed candidate set."""
-    direct = (
-        db.query(Patient)
-        .filter(
-            or_(
-                (
-                    Patient.first_name.ilike(first_t)
-                    & Patient.last_name.ilike(last_t)
-                ),
-                (
-                    Patient.first_name.ilike(last_t)
-                    & Patient.last_name.ilike(first_t)
-                ),
-            )
-        )
-        .all()
-    )
-    if direct:
-        return direct
-
-    nf, nl = _normalize_person_name(first_t), _normalize_person_name(last_t)
-    if len(nf) < 2 or len(nl) < 2:
-        return []
-
-    candidates = (
-        db.query(Patient)
-        .filter(
-            Patient.first_name.ilike(first_t),
-            Patient.last_name.ilike(f"%{last_t.split()[-1]}%"),
-        )
-        .all()
-    )
-    matched = []
-    for patient in candidates:
-        pf = _normalize_person_name(patient.first_name or "")
-        pl = _normalize_person_name(patient.last_name or "")
-        if pf == nf and (pl == nl or _last_names_compatible(nl, pl)):
-            matched.append(patient)
-        elif pf == nl and (pl == nf or _last_names_compatible(nf, pl)):
-            matched.append(patient)
-    return matched
-
-
-def _extract_name_tokens(query: str) -> List[str]:
-    raw = re.findall(r"[^\W\d_]+(?:[-'][^\W\d_]+)?", query, flags=re.UNICODE)
-    lower = [t.lower() for t in raw]
-    tokens = [t for t in lower if t not in NAME_STOPWORDS]
-
-    if "patient" in lower:
-        idx = lower.index("patient")
-        tokens = lower[idx + 1 : idx + 6]
-    elif "patiente" in lower:
-        idx = lower.index("patiente")
-        tokens = lower[idx + 1 : idx + 6]
-
-    tokens = [t for t in tokens if t not in NAME_STOPWORDS]
-    return tokens[:12]
-
-
-def _extract_name_pairs(query: str) -> List[Tuple[str, str]]:
-    tokens = _extract_name_tokens(query)
-    pairs: List[Tuple[str, str]] = []
-
-    def add_pair(first_t: str, last_t: str) -> None:
-        if len(first_t) < 2 or len(last_t) < 2:
-            return
-        pair = (first_t, last_t)
-        if pair not in pairs:
-            pairs.append(pair)
-
-    if len(tokens) >= 2:
-        add_pair(tokens[0], " ".join(tokens[1:]))
-
-    for index in range(len(tokens) - 1):
-        add_pair(tokens[index], tokens[index + 1])
-
-    # Compound names ("Fatima El Amrani" → first="fatima", last="el amrani")
-    for index in range(len(tokens) - 2):
-        a, b, c = tokens[index], tokens[index + 1], tokens[index + 2]
-        add_pair(a, f"{b} {c}")
-        add_pair(f"{a} {b}", c)
-
-    # Skip middle particles only when the middle token is not a name particle
-    if len(tokens) >= 3 and tokens[1] not in NAME_PARTICLES:
-        add_pair(tokens[0], tokens[-1])
-
-    return pairs
-
-
-def _pair_specificity(first_t: str, last_t: str) -> int:
-    """Higher score = more specific (prefer compound surnames over short fragments)."""
-    last_words = len(last_t.split())
-    first_words = len(first_t.split())
-    # Deprioritize very short surname fragments like "el" alone
-    short_penalty = 20 if len(last_t) <= 3 else 0
-    if len(first_t) <= 3:
-        short_penalty += 10
-    return (last_words * 100) + (first_words * 10) + len(last_t) + len(first_t) - short_penalty
-
-
-def _rank_name_pairs(pairs: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
-    return sorted(pairs, key=lambda pair: _pair_specificity(pair[0], pair[1]), reverse=True)
-
-
-def detect_patient_from_texts(
-    db: Session, texts: List[str]
-) -> Tuple[Optional[int], List[str], Optional[str]]:
-    """Try to resolve a patient from one or more prior user messages."""
-    warnings: List[str] = []
-    matches_by_id = {}
-    for text in texts:
-        if not text or not text.strip():
-            continue
-        pid, text_warnings, name = detect_patient_from_query(db, text)
-        warnings.extend(text_warnings)
-        if pid:
-            matches_by_id[pid] = name
-
-    if len(matches_by_id) == 1:
-        pid = next(iter(matches_by_id))
-        return pid, warnings, matches_by_id[pid]
-    if len(matches_by_id) > 1:
-        warnings.append("Multiple patients matched the conversation history. Please specify IPP.")
-    return None, warnings, None
-
-
-def _find_patients_by_single_token(db: Session, token: str) -> List[Patient]:
-    """Match a lone name token against first or last name (incl. compound last names)."""
-    if len(token) < 3:
-        return []
-    matches = (
-        db.query(Patient)
-        .filter(
-            or_(
-                Patient.first_name.ilike(token),
-                Patient.last_name.ilike(token),
-                Patient.last_name.ilike(f"% {token}"),
-                Patient.last_name.ilike(f"{token} %"),
-            )
-        )
-        .limit(5)
-        .all()
-    )
-    return matches

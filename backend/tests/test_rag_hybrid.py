@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime
 
-from app.chat.rag.patient_detection import detect_patient_from_query, _extract_name_pairs
+from app.chat.rag.patient_detection import detect_patient_from_query, _candidate_token_lists
 from app.chat.rag.fact_ranking import rank_and_cap_facts
 from app.chat.rag.chat_service import clean_grounded_response_text
 from app.chat.rag.retrievers.structured_retriever import RetrievedFact
@@ -36,12 +36,11 @@ class TestPatientDetection:
         assert pid is None
         assert any("not found" in w.lower() for w in warnings)
 
-    def test_extracts_name_pair_from_natural_language_request(self):
-        pairs = _extract_name_pairs(
+    def test_extracts_name_from_preposition_phrase(self):
+        lists, _ = _candidate_token_lists(
             "Veuillez fournir les dossiers médicaux de Layla Laksiri pour décrire son cas."
         )
-
-        assert ("layla", "laksiri") in pairs
+        assert ["layla", "laksiri"] in lists
 
 
 class TestFactRanking:
