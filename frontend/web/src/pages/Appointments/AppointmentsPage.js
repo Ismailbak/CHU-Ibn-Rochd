@@ -158,6 +158,14 @@ function AppointmentsPage() {
     });
   };
 
+  const applyMonthStats = (monthRows) => {
+    setStats((prev) => ({
+      ...prev,
+      confirmedMonth: monthRows.filter((a) => a.status === 'confirmed').length,
+      pending: monthRows.filter((a) => a.status === 'pending').length,
+    }));
+  };
+
   const reloadAppointments = async () => {
     const { from, to } = getMonthRange(currentDate);
     const week = getWeekRange();
@@ -265,7 +273,9 @@ function AppointmentsPage() {
         reason: apt.notes,
         status: 'confirmed',
       });
-      setAppointments(appointments.map(a => a.id === id ? { ...a, status: 'confirmed' } : a));
+      const updated = appointments.map(a => a.id === id ? { ...a, status: 'confirmed' } : a);
+      setAppointments(updated);
+      applyMonthStats(updated);
       toast.success('Rendez-vous confirmé');
     } catch {
       toast.error('Erreur lors de la confirmation');
@@ -282,7 +292,9 @@ function AppointmentsPage() {
         reason: apt.notes,
         status: 'cancelled',
       });
-      setAppointments(appointments.map(a => a.id === id ? { ...a, status: 'cancelled' } : a));
+      const updated = appointments.map(a => a.id === id ? { ...a, status: 'cancelled' } : a);
+      setAppointments(updated);
+      applyMonthStats(updated);
       toast.info('Rendez-vous annulé');
     } catch {
       toast.error('Erreur lors de l\'annulation');
@@ -313,7 +325,9 @@ function AppointmentsPage() {
       });
       const created = mapApiAppointmentToUi(res.data);
       if (created.date.startsWith(getMonthRange(currentDate).from.slice(0, 7))) {
-        setAppointments((prev) => [...prev, created].sort((a, b) => (a.time > b.time ? 1 : -1)));
+        const next = [...appointments, created].sort((a, b) => (a.time > b.time ? 1 : -1));
+        setAppointments(next);
+        applyMonthStats(next);
       } else {
         await reloadAppointments();
       }
