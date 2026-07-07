@@ -42,6 +42,36 @@ export const formatApiError = (err, fallback = 'Une erreur est survenue.') => {
   return fallback;
 };
 
+/** Save a blob API response as a file download (PDF, export, etc.). */
+export async function saveBlobFromResponse(response, filename, fallbackMessage = 'Erreur lors du téléchargement.') {
+  let blob = response?.data;
+  if (!(blob instanceof Blob)) {
+    blob = new Blob([blob], { type: 'application/pdf' });
+  }
+
+  if (blob.type.includes('json') || (blob.size < 512 && !blob.type.includes('pdf'))) {
+    const text = await blob.text();
+    try {
+      const parsed = JSON.parse(text);
+      throw new Error(formatApiError({ response: { data: parsed } }, fallbackMessage));
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        throw new Error(text.trim() || fallbackMessage);
+      }
+      throw error;
+    }
+  }
+
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -52,8 +82,13 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => {
-    if (response?.data != null && typeof response.data === 'object') {
-      response.data = repairDeep(response.data);
+    const data = response?.data;
+    const isBinaryPayload =
+      (typeof Blob !== 'undefined' && data instanceof Blob) ||
+      (typeof ArrayBuffer !== 'undefined' && data instanceof ArrayBuffer);
+
+    if (data != null && typeof data === 'object' && !isBinaryPayload) {
+      response.data = repairDeep(data);
     }
     return response;
   },

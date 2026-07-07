@@ -25,7 +25,20 @@ import {
 } from '../../components/MedicalForms/AllForms';
 import DynamicFormRenderer from './DynamicFormRenderer';
 import TreatmentPrescriptionPanel from '../../components/Treatments/TreatmentPrescriptionPanel';
+import { formatMoroccoShortDate } from '../../utils/dateTime';
 import './MedicalActForm.css';
+
+const LAB_CATEGORY_OPTIONS = ['Hématologie', 'Biochimie', 'Immunologie', 'Microbiologie'];
+
+const EMPTY_NEW_LAB = {
+  name: '',
+  value: '',
+  unit: '',
+  date: '',
+  category: '',
+  abnormal: false,
+  notes: '',
+};
 
 const CATEGORY_OPTIONS = [
   { value: 'rheumatology', label: 'Rhumatologie' },
@@ -212,6 +225,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit, defaultPatien
   const [dynamicFormData, setDynamicFormData] = useState({});
   const [dynamicSaved, setDynamicSaved] = useState(false);
   const [isLoadingFormSystem, setIsLoadingFormSystem] = useState(false);
+  const [newLab, setNewLab] = useState(EMPTY_NEW_LAB);
 
   // Initialize or update form when initialData changes
   useEffect(() => {
@@ -284,6 +298,12 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit, defaultPatien
       setSearchQuery('');
     }
   }, [initialData, isEdit, defaultPatientId]);
+
+  useEffect(() => {
+    if (step === 5 && form.date) {
+      setNewLab(prev => ({ ...prev, date: prev.date || form.date }));
+    }
+  }, [step, form.date]);
 
   useEffect(() => {
     if (!defaultPatientId || isEdit) return undefined;
@@ -1054,7 +1074,7 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit, defaultPatien
                         <span className="maf-lab-result-name">{result.name}</span>
                         <span className="maf-lab-result-value">{result.value} {result.unit}</span>
                       </div>
-                      <span className="maf-lab-result-date">{result.date}</span>
+                      <span className="maf-lab-result-date">{formatMoroccoShortDate(result.date)}</span>
                       {result.abnormal && <span className="maf-lab-result-abnormal">Anormal</span>}
                     </div>
                     <button
@@ -1078,18 +1098,20 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit, defaultPatien
                   <label className="maf-label">Analyse</label>
                   <input
                     type="text"
-                    id="lab-name"
                     className="maf-input"
                     placeholder="Ex: Glycémie"
+                    value={newLab.name}
+                    onChange={(e) => setNewLab(prev => ({ ...prev, name: e.target.value }))}
                   />
                 </div>
                 <div className="maf-field">
                   <label className="maf-label">Valeur</label>
                   <input
                     type="text"
-                    id="lab-value"
                     className="maf-input"
                     placeholder="Ex: 95"
+                    value={newLab.value}
+                    onChange={(e) => setNewLab(prev => ({ ...prev, value: e.target.value }))}
                   />
                 </div>
               </div>
@@ -1099,36 +1121,50 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit, defaultPatien
                   <label className="maf-label">Unité</label>
                   <input
                     type="text"
-                    id="lab-unit"
                     className="maf-input"
                     placeholder="Ex: mg/dL"
+                    value={newLab.unit}
+                    onChange={(e) => setNewLab(prev => ({ ...prev, unit: e.target.value }))}
                   />
                 </div>
                 <div className="maf-field">
                   <label className="maf-label">Date</label>
                   <input
                     type="date"
-                    id="lab-date"
                     className="maf-input"
-                    defaultValue={form.date}
+                    lang="fr"
+                    value={newLab.date || form.date}
+                    onChange={(e) => setNewLab(prev => ({ ...prev, date: e.target.value }))}
                   />
                 </div>
               </div>
               
               <div className="maf-field">
                 <label className="maf-label">Catégorie</label>
-                <select id="lab-category" className="maf-input">
-                  <option value="">-- Sélectionner --</option>
-                  <option value="Hématologie">Hématologie</option>
-                  <option value="Biochimie">Biochimie</option>
-                  <option value="Immunologie">Immunologie</option>
-                  <option value="Microbiologie">Microbiologie</option>
-                </select>
+                <div className="maf-lab-category-group">
+                  {LAB_CATEGORY_OPTIONS.map(cat => (
+                    <button
+                      key={cat}
+                      type="button"
+                      className={`maf-category-chip ${newLab.category === cat ? 'selected' : ''}`}
+                      onClick={() => setNewLab(prev => ({
+                        ...prev,
+                        category: prev.category === cat ? '' : cat,
+                      }))}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
               </div>
               
               <div className="maf-field checkbox">
                 <label>
-                  <input type="checkbox" id="lab-abnormal" />
+                  <input
+                    type="checkbox"
+                    checked={newLab.abnormal}
+                    onChange={(e) => setNewLab(prev => ({ ...prev, abnormal: e.target.checked }))}
+                  />
                   <span>Résultat anormal</span>
                 </label>
               </div>
@@ -1136,10 +1172,11 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit, defaultPatien
               <div className="maf-field">
                 <label className="maf-label">Notes</label>
                 <textarea
-                  id="lab-notes"
                   className="maf-textarea"
                   placeholder="Observations supplémentaires..."
                   rows={2}
+                  value={newLab.notes}
+                  onChange={(e) => setNewLab(prev => ({ ...prev, notes: e.target.value }))}
                 />
               </div>
               
@@ -1147,8 +1184,8 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit, defaultPatien
                 type="button"
                 className="maf-btn-add-lab"
                 onClick={() => {
-                  const name = document.getElementById('lab-name').value.trim();
-                  const value = document.getElementById('lab-value').value.trim();
+                  const name = newLab.name.trim();
+                  const value = newLab.value.trim();
                   if (!name || !value) {
                     toast.warning('Veuillez entrer l\'analyse et la valeur');
                     return;
@@ -1158,19 +1195,14 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit, defaultPatien
                     labResults: [...prev.labResults, {
                       name,
                       value,
-                      unit: document.getElementById('lab-unit').value.trim(),
-                      date: document.getElementById('lab-date').value,
-                      category: document.getElementById('lab-category').value || null,
-                      abnormal: document.getElementById('lab-abnormal').checked,
-                      notes: document.getElementById('lab-notes').value.trim() || null,
+                      unit: newLab.unit.trim(),
+                      date: newLab.date || form.date,
+                      category: newLab.category || null,
+                      abnormal: newLab.abnormal,
+                      notes: newLab.notes.trim() || null,
                     }]
                   }));
-                  document.getElementById('lab-name').value = '';
-                  document.getElementById('lab-value').value = '';
-                  document.getElementById('lab-unit').value = '';
-                  document.getElementById('lab-category').value = '';
-                  document.getElementById('lab-abnormal').checked = false;
-                  document.getElementById('lab-notes').value = '';
+                  setNewLab({ ...EMPTY_NEW_LAB, date: form.date });
                 }}
               >
                 <FiPlus /> Ajouter un résultat

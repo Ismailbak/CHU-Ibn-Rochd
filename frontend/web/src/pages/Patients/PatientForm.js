@@ -81,9 +81,6 @@ const initialForm = {
   email: '',
   address: '',
   city: '',
-  maritalStatus: '',
-  nationality: '',
-  profession: '',
   insurance: '',
   insuranceNumber: '',
   bloodType: '',
@@ -119,9 +116,6 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
         email: initialData.email || '',
         address: initialData.address || '',
         city: initialData.city || '',
-        maritalStatus: initialData.marital_status || initialData.maritalStatus || '',
-        nationality: initialData.nationality || '',
-        profession: initialData.profession || '',
         insurance: initialData.insurance || '',
         insuranceNumber: initialData.insurance_number || initialData.insuranceNumber || '',
         bloodType: initialData.blood_type || initialData.bloodType || '',
@@ -269,9 +263,6 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
         email: form.email || null,
         address: form.address || null,
         city: form.city || null,
-        marital_status: form.maritalStatus || null,
-        nationality: form.nationality || null,
-        profession: form.profession || null,
         insurance: form.insurance || null,
         insurance_number: form.insuranceNumber || null,
         blood_type: form.bloodType || null,
@@ -445,8 +436,6 @@ function PatientForm({ onSuccess, onClose, initialData = null, isEdit = false })
                   <option value="M.">M.</option>
                   <option value="Mme">Mme</option>
                   <option value="Mlle">Mlle</option>
-                  <option value="Dr">Dr</option>
-                  <option value="Pr">Pr</option>
                 </select>
               </div>
               <div className="pf-field">

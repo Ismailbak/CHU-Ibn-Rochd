@@ -351,20 +351,12 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
   // PDF download handler
   const handleDownloadPDF = async () => {
     try {
-      const { getMedicalActPdf } = await import('../../api/api');
+      const { getMedicalActPdf, saveBlobFromResponse } = await import('../../api/api');
       const response = await getMedicalActPdf(act.id);
-      const blob = response.data instanceof Blob ? response.data : new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `acte_medical_${act.id}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      await saveBlobFromResponse(response, `acte_medical_${act.id}.pdf`, 'Erreur lors du téléchargement du PDF.');
     } catch (err) {
       console.error('Download error:', err);
-      alert('Erreur lors du téléchargement du PDF.');
+      alert(err.message || 'Erreur lors du téléchargement du PDF.');
     }
   };
 
@@ -785,17 +777,11 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
                   <li key={doc.id}>
                     <button type="button" className="link-btn doc-link" style={{ textAlign: 'left' }} onClick={async () => {
                       try {
-                        const { downloadMedicalActDocument } = await import('../../api/api');
+                        const { downloadMedicalActDocument, saveBlobFromResponse } = await import('../../api/api');
                         const response = await downloadMedicalActDocument(act.id, doc.id);
-                        const url = window.URL.createObjectURL(new Blob([response.data]));
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.setAttribute('download', doc.filename);
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
+                        await saveBlobFromResponse(response, doc.filename, 'Erreur lors du téléchargement du document.');
                       } catch (err) {
-                        alert('Erreur lors du téléchargement');
+                        alert(err.message || 'Erreur lors du téléchargement');
                       }
                     }}>{doc.filename}</button>
                     <span className="doc-date">{doc.date}</span>

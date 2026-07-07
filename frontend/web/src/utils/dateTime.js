@@ -68,3 +68,14 @@ export function formatMoroccoGroupDate(dateKey) {
     year: 'numeric',
   }).format(noon);
 }
+
+/** YYYY-MM-DD → DD/MM/YYYY for display. */
+export function formatMoroccoShortDate(value) {
+  if (!value) return '';
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const [, year, month, day] = match;
+    return `${day}/${month}/${year}`;
+  }
+  return String(value);
+}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPatient, getPatientAppointments, getPatientMedicalActs, exportPatientDossier, getPatientResults } from '../../api/api';
+import { getPatient, getPatientAppointments, getPatientMedicalActs, exportPatientDossier, getPatientResults, saveBlobFromResponse } from '../../api/api';
 import { 
   FiArrowLeft, FiEdit2, FiPhone, FiMail, FiMapPin, FiCalendar, 
   FiFileText, FiActivity, FiHeart, FiAlertCircle, FiClock,
@@ -138,17 +138,11 @@ function PatientDetailPage() {
     }
     try {
       const response = await exportPatientDossier(id);
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
       const filename = `Dossier_${patient.first_name}_${patient.last_name}.pdf`;
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      await saveBlobFromResponse(response, filename, 'Une erreur est survenue lors de la génération du PDF.');
     } catch (error) {
       console.error('Erreur lors de l\'export du dossier:', error);
-      alert('Une erreur est survenue lors de la génération du PDF.');
+      alert(error.message || 'Une erreur est survenue lors de la génération du PDF.');
     }
   };
 

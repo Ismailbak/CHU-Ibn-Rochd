@@ -177,8 +177,8 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
                   Médicaments actuels
                 </label>
                 {(formData.current_treatment_json || []).map((med, idx) => (
-                  <div key={idx} className="form-row" style={{ alignItems: 'flex-end', marginBottom: '1rem', gap: '1rem' }}>
-                    <div className="form-group" style={{ flex: 2 }}>
+                  <div key={idx} className="array-item-row">
+                    <div className="form-group">
                       <input
                         type="text"
                         placeholder="Nom du médicament"
@@ -187,7 +187,7 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
                         className="form-input"
                       />
                     </div>
-                    <div className="form-group" style={{ flex: 1 }}>
+                    <div className="form-group">
                       <input
                         type="date"
                         value={med.start_date || ''}
@@ -197,9 +197,9 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
                     </div>
                     <button
                       type="button"
-                      className="maf-lab-result-remove"
+                      className="btn-remove-row"
                       onClick={() => handleRemoveArrayItem('current_treatment_json', idx)}
-                      style={{ marginBottom: '5px', background: '#fee2e2', color: '#dc2626', border: 'none', padding: '8px', borderRadius: '6px', cursor: 'pointer' }}
+                      aria-label="Supprimer"
                     >
                       <FiTrash2 />
                     </button>
@@ -207,8 +207,7 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
                 ))}
                 <button
                   type="button"
-                  className="btn-add"
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#dbeafe', color: '#1e40af', border: 'none', padding: '10px 14px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}
+                  className="btn-add btn-add-inline"
                   onClick={() => handleAddArrayItem('current_treatment_json', { type: '', start_date: '' })}
                 >
                   <FiPlus /> Ajouter un médicament
@@ -491,8 +490,8 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
             <div className="form-group">
               <label>Arthrose - Détails et Localisations</label>
               {(formData.diagnosis_osteoarthritis_json || []).map((dx, idx) => (
-                <div key={idx} className="form-row" style={{ alignItems: 'flex-end', marginBottom: '1rem', gap: '1rem' }}>
-                  <div className="form-group" style={{ flex: 2 }}>
+                <div key={idx} className="array-item-row">
+                  <div className="form-group">
                     <input
                       type="text"
                       placeholder="Articulation (ex: Genou droit)"
@@ -501,11 +500,11 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
                       className="form-input"
                     />
                   </div>
-                  <div className="form-group" style={{ flex: 1 }}>
+                  <div className="form-group">
                     <select 
                       value={dx.grade || ''} 
                       onChange={(e) => handleArrayChange('diagnosis_osteoarthritis_json', idx, { ...dx, grade: e.target.value })}
-                      className="form-input"
+                      className="form-input form-select"
                     >
                       <option value="">Grade K&L</option>
                       <option value="1">I</option>
@@ -516,9 +515,9 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
                   </div>
                   <button
                     type="button"
-                    className="maf-lab-result-remove"
+                    className="btn-remove-row"
                     onClick={() => handleRemoveArrayItem('diagnosis_osteoarthritis_json', idx)}
-                    style={{ marginBottom: '5px', background: '#fee2e2', color: '#dc2626', border: 'none', padding: '8px', borderRadius: '6px', cursor: 'pointer' }}
+                    aria-label="Supprimer"
                   >
                     <FiTrash2 />
                   </button>
@@ -526,8 +525,7 @@ export const FormCsRd = ({ onSubmit, initialData = {} }) => {
               ))}
               <button
                 type="button"
-                className="btn-add"
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#dbeafe', color: '#1e40af', border: 'none', padding: '10px 14px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}
+                className="btn-add btn-add-inline"
                 onClick={() => handleAddArrayItem('diagnosis_osteoarthritis_json', { joint: '', grade: '' })}
               >
                 <FiPlus /> Ajouter un diagnostic d'arthrose
