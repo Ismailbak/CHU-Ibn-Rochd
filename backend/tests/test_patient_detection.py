@@ -199,7 +199,7 @@ class TestPatientDetectionMatrix:
         )
         pid, warnings, _ = detect_patient_from_query(db, "patiente Fatima El Amrani")
         assert pid is None
-        assert any("Multiple patients" in w for w in warnings)
+        assert any("Plusieurs patients" in w or "Multiple patients" in w for w in warnings)
 
     def test_history_single_patient(self, db, enable_auto_detect):
         seed(db, _patient(18877, "Fatima", "El Amrani", "2026-0042"))

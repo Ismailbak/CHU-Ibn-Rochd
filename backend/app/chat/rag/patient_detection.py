@@ -134,7 +134,7 @@ def detect_patient_from_query(
         if patient is not None:
             return patient.id, warnings, _patient_display_name(patient)
         if ambiguous:
-            warnings.append("Multiple patients matched the provided name. Please specify IPP.")
+            warnings.append(_ambiguous_name_warning(ambiguous))
             return None, warnings, None
 
     if has_keyword:
@@ -145,9 +145,7 @@ def detect_patient_from_query(
                     patient = surname_matches[0]
                     return patient.id, warnings, _patient_display_name(patient)
                 if len(surname_matches) > 1:
-                    warnings.append(
-                        "Multiple patients matched the provided name. Please specify IPP."
-                    )
+                    warnings.append(_ambiguous_name_warning(surname_matches))
                     return None, warnings, None
 
         for tokens in token_lists:
@@ -157,9 +155,7 @@ def detect_patient_from_query(
                     patient = single_matches[0]
                     return patient.id, warnings, _patient_display_name(patient)
                 if len(single_matches) > 1:
-                    warnings.append(
-                        "Multiple patients matched the provided name. Please specify IPP."
-                    )
+                    warnings.append(_ambiguous_name_warning(single_matches))
                     return None, warnings, None
 
     return None, warnings, None
@@ -295,10 +291,10 @@ def _looks_like_name_span(tokens: List[str]) -> bool:
 
 def _search_name_windows(
     db: Session, tokens: List[str]
-) -> Tuple[Optional[Patient], bool]:
+) -> Tuple[Optional[Patient], Optional[List[Patient]]]:
     """
     Slide windows of consecutive tokens (largest first) and match each window
-    against patient names. Returns (patient, ambiguous).
+    against patient names. Returns (patient, ambiguous_matches).
     """
     max_size = min(len(tokens), MAX_NAME_TOKENS)
     for size in range(max_size, 1, -1):
@@ -308,10 +304,10 @@ def _search_name_windows(
             for patient in _find_patients_by_name_tokens(db, window):
                 found[patient.id] = patient
         if len(found) == 1:
-            return next(iter(found.values())), False
+            return next(iter(found.values())), None
         if len(found) > 1:
-            return None, True
-    return None, False
+            return None, list(found.values())
+    return None, None
 
 
 def _name_token_splits(tokens: List[str]) -> List[Tuple[str, str]]:
@@ -510,6 +506,22 @@ def _find_patients_by_single_token(db: Session, token: str) -> List[Patient]:
 # ---------------------------------------------------------------------------
 # Normalization helpers
 # ---------------------------------------------------------------------------
+
+def _ambiguous_name_warning(matches: List[Patient]) -> str:
+    """Build a warning that lists IPPs so the user can disambiguate."""
+    ipp_labels = []
+    for patient in matches[:5]:
+        ipp = getattr(patient, "ipp", None)
+        if isinstance(ipp, str) and ipp.strip():
+            ipp_labels.append(f"IPP {ipp.strip()}")
+        else:
+            ipp_labels.append(f"#{patient.id}")
+    suffix = ", ".join(ipp_labels) if ipp_labels else "plusieurs dossiers"
+    return (
+        f"Plusieurs patients correspondent à ce nom ({suffix}). "
+        "Veuillez préciser l'IPP."
+    )
+
 
 def _patient_display_name(patient: Patient) -> str:
     parts = []
