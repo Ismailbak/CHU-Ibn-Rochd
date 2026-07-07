@@ -12,7 +12,7 @@ from app.models.medical_act import MedicalAct as MedicalActModel, ActDiagnosis a
 from app.models.audit import AuditLog
 from app.models.notification import Notification as NotificationModel
 from app.models.user import User
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from app.auth.router import get_current_user_orm, RoleChecker, require_admin
 from app.auth.permissions import ROLES_DASHBOARD
 from app.analytics import service as analytics_service
@@ -27,12 +27,30 @@ def get_recent_activity(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_orm),
 ):
-    # Get latest 5 patients
-    recent_patients = db.query(PatientModel).order_by(PatientModel.created_at.desc()).limit(5).all()
-    # Get latest 5 appointments
-    recent_appointments = db.query(AppointmentModel).order_by(AppointmentModel.datetime_scheduled.desc()).limit(5).all()
-    # Get latest 5 medical acts
-    recent_acts = db.query(MedicalActModel).order_by(MedicalActModel.act_date.desc()).limit(5).all()
+    """Return the latest past events (not future appointments)."""
+    now = datetime.now()
+    today = now.date()
+
+    recent_patients = (
+        db.query(PatientModel)
+        .order_by(PatientModel.created_at.desc())
+        .limit(5)
+        .all()
+    )
+    recent_appointments = (
+        db.query(AppointmentModel)
+        .filter(AppointmentModel.datetime_scheduled <= now)
+        .order_by(AppointmentModel.datetime_scheduled.desc())
+        .limit(5)
+        .all()
+    )
+    recent_acts = (
+        db.query(MedicalActModel)
+        .filter(MedicalActModel.act_date <= today)
+        .order_by(MedicalActModel.act_date.desc())
+        .limit(5)
+        .all()
+    )
 
     patient_ids = {
         *[p.id for p in recent_patients],
@@ -73,9 +91,13 @@ def get_recent_activity(
     return {"activities": activities[:10]}  # Return the 10 most recent activities
 
 def _to_iso(dt):
-    if hasattr(dt, 'isoformat'):
+    if dt is None:
+        return None
+    if isinstance(dt, date) and not isinstance(dt, datetime):
+        return datetime.combine(dt, datetime.min.time()).isoformat()
+    if hasattr(dt, "isoformat"):
         return dt.isoformat()
-    return str(dt) if dt else None
+    return str(dt)
 
 def _patient_display_name(patient):
     full_name = " ".join(

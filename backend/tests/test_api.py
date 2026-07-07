@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+from datetime import datetime
 from app.main import app
 from types import SimpleNamespace
 
@@ -52,3 +53,15 @@ def test_analytics_summary():
     assert "total_patients" in data
     assert "avg_age" in data
     assert "common_diagnoses" in data
+
+
+def test_analytics_recent_activity_excludes_future():
+    response = client.get("/api/analytics/recent-activity")
+    assert response.status_code == 200
+    data = response.json()
+    assert "activities" in data
+    now = datetime.now()
+    for activity in data["activities"]:
+        assert activity.get("time"), "activity must have a time"
+        activity_time = datetime.fromisoformat(activity["time"])
+        assert activity_time <= now, f"future activity returned: {activity}"

@@ -34,14 +34,13 @@ function timeAgo(isoString) {
   const now = new Date();
   const date = new Date(isoString);
   if (isNaN(date.getTime())) return 'Date inconnue';
-  let diff = Math.floor((now - date) / 1000);
-  // If activity is in the future or negative diff, show date
-  if (diff < 0) return date.toLocaleDateString();
+  const diff = Math.floor((now - date) / 1000);
+  if (diff < 0) return date.toLocaleDateString('fr-FR');
   if (diff < 60) return 'À l’instant';
   if (diff < 3600) return `Il y a ${Math.floor(diff / 60)} min`;
-  if (diff < 86400) return `Il y a ${Math.floor(diff / 3600)}h`;
+  if (diff < 86400) return `Il y a ${Math.floor(diff / 3600)} h`;
   if (diff < 172800) return 'Hier';
-  return date.toLocaleDateString();
+  return date.toLocaleDateString('fr-FR');
 }
 
 function DashboardPage() {
