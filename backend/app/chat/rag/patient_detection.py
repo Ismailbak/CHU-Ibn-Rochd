@@ -337,80 +337,102 @@ def _last_name_has_leading_particle(last_norm: str) -> bool:
     return bool(parts and parts[0] in NAME_PARTICLES)
 
 
-def _find_patients_by_name_tokens(db: Session, tokens: List[str]) -> List[Patient]:
-    """
-    Tiered matching of a token window against (first_name, last_name), both orders:
-    1. Exact ILIKE (with hyphen/space variants).
-    2. Accent/hyphen-insensitive equality.
-    3. Particle-stripped surname equality — only when the query omits particles
-       (e.g. query "Fatima Amrani" may match DB "El Amrani", but "Fatima El Amrani" won't).
-    """
-    if len(tokens) < 2:
-        return []
-
+def _rank_name_splits(tokens: List[str]) -> List[Tuple[str, str]]:
+    """Prefer single-token first name + compound last name (most common DB layout)."""
     splits = _name_token_splits(tokens)
+
+    def score(pair: Tuple[str, str]) -> int:
+        first, last = pair
+        first_words = len(first.split())
+        last_words = len(last.split())
+        particle_bonus = 15 if last_words >= 2 and last.split()[0] in NAME_PARTICLES else 0
+        return (100 if first_words == 1 else 60 - first_words * 10) + last_words * 12 + len(last) + particle_bonus
+
+    return sorted(splits, key=score, reverse=True)
+
+
+def _sql_pair_match(db: Session, first_raw: str, last_raw: str) -> List[Patient]:
+    """Exact first/last ILIKE match with hyphen/space variants (no swapped order)."""
     matched: Dict[int, Patient] = {}
-
-    for first_raw, last_raw in splits:
-        for first_v in _sql_name_variants(first_raw):
-            for last_v in _sql_name_variants(last_raw):
-                rows = (
-                    db.query(Patient)
-                    .filter(
-                        or_(
-                            (
-                                Patient.first_name.ilike(first_v)
-                                & Patient.last_name.ilike(last_v)
-                            ),
-                            (
-                                Patient.first_name.ilike(last_v)
-                                & Patient.last_name.ilike(first_v)
-                            ),
-                        )
-                    )
-                    .all()
+    for first_v in _sql_name_variants(first_raw):
+        for last_v in _sql_name_variants(last_raw):
+            rows = (
+                db.query(Patient)
+                .filter(
+                    Patient.first_name.ilike(first_v),
+                    Patient.last_name.ilike(last_v),
                 )
-                for patient in rows:
-                    matched[patient.id] = patient
-    if matched:
-        return list(matched.values())
+                .all()
+            )
+            for patient in rows:
+                matched[patient.id] = patient
+    return list(matched.values())
 
-    candidates = _fuzzy_candidates(db, tokens)
-    if not candidates:
+
+def _fuzzy_pair_match(
+    db: Session,
+    first_raw: str,
+    last_raw: str,
+    source_tokens: List[str],
+    *,
+    allow_particle_strip: bool,
+) -> List[Patient]:
+    """Normalized first/last match against a narrowed candidate set."""
+    nf = _normalize_person_name(first_raw)
+    nl = _normalize_person_name(last_raw)
+    if len(nf) < 2 or len(nl) < 2:
         return []
 
-    norm_splits = [
-        (_normalize_person_name(first), _normalize_person_name(last))
-        for first, last in splits
-    ]
+    candidates = _fuzzy_candidates(db, source_tokens)
+    matched: Dict[int, Patient] = {}
 
     for patient in candidates:
         pf = _normalize_person_name(patient.first_name or "")
         pl = _normalize_person_name(patient.last_name or "")
-        for nf, nl in norm_splits:
-            if (pf == nf and pl == nl) or (pf == nl and pl == nf):
+        if pf == nf and pl == nl:
+            matched[patient.id] = patient
+            continue
+        if allow_particle_strip and not _last_name_has_leading_particle(nl):
+            stripped_pl = _strip_name_particles(pl)
+            stripped_nl = _strip_name_particles(nl)
+            if stripped_nl and pf == nf and stripped_pl == stripped_nl:
                 matched[patient.id] = patient
-                break
-    if matched:
-        return list(matched.values())
 
-    query_uses_particle = any(_last_name_has_leading_particle(nl) for _, nl in norm_splits)
-    if query_uses_particle:
+    return list(matched.values())
+
+
+def _find_patients_by_name_tokens(db: Session, tokens: List[str]) -> List[Patient]:
+    """
+    Tiered matching per split (best split first — never merge weaker splits):
+    1. Exact ILIKE (with hyphen/space variants).
+    2. Accent/hyphen-insensitive equality.
+    3. Particle-stripped surname — only when the query omits surname particles.
+    """
+    if len(tokens) < 2:
         return []
 
-    for patient in candidates:
-        pf = _normalize_person_name(patient.first_name or "")
-        pl = _strip_name_particles(_normalize_person_name(patient.last_name or ""))
-        if not pl:
-            continue
-        for nf, nl in norm_splits:
-            stripped_nl = _strip_name_particles(nl)
-            if not stripped_nl:
-                continue
-            if pf == nf and pl == stripped_nl:
-                matched[patient.id] = patient
-                break
-    return list(matched.values())
+    for first_raw, last_raw in _rank_name_splits(tokens):
+        matches = _sql_pair_match(db, first_raw, last_raw)
+        if matches:
+            return matches
+
+    allow_particle_strip = not any(
+        _last_name_has_leading_particle(_normalize_person_name(last))
+        for _, last in _rank_name_splits(tokens)
+    )
+
+    for first_raw, last_raw in _rank_name_splits(tokens):
+        matches = _fuzzy_pair_match(
+            db,
+            first_raw,
+            last_raw,
+            tokens,
+            allow_particle_strip=allow_particle_strip,
+        )
+        if matches:
+            return matches
+
+    return []
 
 
 def _fuzzy_candidates(db: Session, tokens: List[str]) -> List[Patient]:

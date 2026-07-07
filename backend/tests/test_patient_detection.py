@@ -158,7 +158,23 @@ class TestPatientDetectionMatrix:
         assert pid == 6
         assert warnings == []
 
-    def test_particle_query_does_not_match_surname_only(self, db, enable_auto_detect):
+    def test_prefer_primary_split_over_alternate_storage(self, db, enable_auto_detect):
+        """Same person stored as Fatima|El Amrani vs Fatima El|Amrani — primary split wins."""
+        seed(
+            db,
+            _patient(18877, "Fatima", "El Amrani", "2026-0042"),
+            _patient(99, "Fatima El", "Amrani"),
+        )
+        pid, warnings, _ = detect_patient_from_query(db, "patiente Fatima El Amrani")
+        assert pid == 18877
+        assert warnings == []
+
+    def test_alternate_storage_when_primary_missing(self, db, enable_auto_detect):
+        seed(db, _patient(99, "Fatima El", "Amrani"))
+        pid, warnings, _ = detect_patient_from_query(db, "patiente Fatima El Amrani")
+        assert pid == 99
+        assert warnings == []
+
         seed(
             db,
             _patient(18877, "Fatima", "El Amrani"),
