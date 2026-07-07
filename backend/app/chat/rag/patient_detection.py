@@ -79,34 +79,34 @@ def detect_patient_from_query(
         return None, warnings, None
 
     tokens = _extract_name_tokens(query)
-    candidate_pairs = _extract_name_pairs(query)
+    candidate_pairs = _rank_name_pairs(_extract_name_pairs(query))
     if candidate_pairs:
-        matches_by_id = {}
+        ambiguous = False
         for first_t, last_t in candidate_pairs:
-            for patient in _find_patients_by_name_pair(db, first_t, last_t):
-                matches_by_id[patient.id] = patient
+            matches = _find_patients_by_name_pair(db, first_t, last_t)
+            if len(matches) == 1:
+                patient = matches[0]
+                return patient.id, warnings, _patient_display_name(patient)
+            if len(matches) > 1:
+                ambiguous = True
 
-        # Compound surname mentioned alone ("... de El Amrani")
-        if not matches_by_id:
+        # Compound surname alone ("... El Amrani")
+        if not ambiguous:
             for index in range(len(tokens) - 1):
                 combo = f"{tokens[index]} {tokens[index + 1]}"
-                for patient in (
+                combo_matches = (
                     db.query(Patient)
-                    .filter(
-                        or_(
-                            Patient.last_name.ilike(combo),
-                            Patient.first_name.ilike(combo),
-                        )
-                    )
+                    .filter(Patient.last_name.ilike(combo))
                     .limit(5)
                     .all()
-                ):
-                    matches_by_id[patient.id] = patient
+                )
+                if len(combo_matches) == 1:
+                    patient = combo_matches[0]
+                    return patient.id, warnings, _patient_display_name(patient)
+                if len(combo_matches) > 1:
+                    ambiguous = True
 
-        if len(matches_by_id) == 1:
-            patient = next(iter(matches_by_id.values()))
-            return patient.id, warnings, _patient_display_name(patient)
-        if len(matches_by_id) > 1:
+        if ambiguous:
             warnings.append("Multiple patients matched the provided name. Please specify IPP.")
         return None, warnings, None
 
@@ -208,10 +208,10 @@ def _extract_name_tokens(query: str) -> List[str]:
 
     if "patient" in lower:
         idx = lower.index("patient")
-        tokens = lower[idx + 1 : idx + 4]
+        tokens = lower[idx + 1 : idx + 6]
     elif "patiente" in lower:
         idx = lower.index("patiente")
-        tokens = lower[idx + 1 : idx + 4]
+        tokens = lower[idx + 1 : idx + 6]
 
     tokens = [t for t in tokens if t not in NAME_STOPWORDS]
     return tokens[:12]
@@ -228,6 +228,9 @@ def _extract_name_pairs(query: str) -> List[Tuple[str, str]]:
         if pair not in pairs:
             pairs.append(pair)
 
+    if len(tokens) >= 2:
+        add_pair(tokens[0], " ".join(tokens[1:]))
+
     for index in range(len(tokens) - 1):
         add_pair(tokens[index], tokens[index + 1])
 
@@ -242,6 +245,21 @@ def _extract_name_pairs(query: str) -> List[Tuple[str, str]]:
         add_pair(tokens[0], tokens[-1])
 
     return pairs
+
+
+def _pair_specificity(first_t: str, last_t: str) -> int:
+    """Higher score = more specific (prefer compound surnames over short fragments)."""
+    last_words = len(last_t.split())
+    first_words = len(first_t.split())
+    # Deprioritize very short surname fragments like "el" alone
+    short_penalty = 20 if len(last_t) <= 3 else 0
+    if len(first_t) <= 3:
+        short_penalty += 10
+    return (last_words * 100) + (first_words * 10) + len(last_t) + len(first_t) - short_penalty
+
+
+def _rank_name_pairs(pairs: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
+    return sorted(pairs, key=lambda pair: _pair_specificity(pair[0], pair[1]), reverse=True)
 
 
 def detect_patient_from_texts(
