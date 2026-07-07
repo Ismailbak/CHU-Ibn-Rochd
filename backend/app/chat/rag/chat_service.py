@@ -119,6 +119,33 @@ async def get_grounded_chat_response(
             conversation_history = [
                 (m.message or "", m.response or "") for m in reversed(recent_messages)
             ]
+        elif not session_id:
+            # No session yet (patient not detected on turn 1) — still load the last
+            # few messages from this user so follow-ups can inherit patient scope.
+            recent_messages = (
+                db.query(ChatMessage)
+                .filter(ChatMessage.user_id == user_id)
+                .order_by(ChatMessage.created_at.desc())
+                .limit(4)
+                .all()
+            )
+            conversation_history = [
+                (m.message or "", m.response or "") for m in reversed(recent_messages)
+            ]
+
+        # Sticky scope from the last message that resolved a patient, even without session.
+        if not session_patient_id and not patient_id:
+            last_scoped = (
+                db.query(ChatMessage)
+                .filter(
+                    ChatMessage.user_id == user_id,
+                    ChatMessage.patient_id.isnot(None),
+                )
+                .order_by(ChatMessage.created_at.desc())
+                .first()
+            )
+            if last_scoped:
+                session_patient_id = last_scoped.patient_id
 
         # Build RAG request
         rag_request = RAGChatRequest(

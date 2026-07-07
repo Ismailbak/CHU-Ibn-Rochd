@@ -10,7 +10,7 @@ from app.chat.rag.retrievers.query_classifier import QueryClassifier, QueryInten
 from app.chat.rag.retrievers.structured_retriever import StructuredRetrievalPipeline, RetrievedFact
 from app.chat.rag.retrievers.prompt_builder import PromptBuilder
 from app.chat.rag.retrievers.semantic_retriever import semantic_retrieve
-from app.chat.rag.patient_detection import detect_patient_from_query
+from app.chat.rag.patient_detection import detect_patient_from_query, detect_patient_from_texts
 from app.chat.rag.fact_ranking import rank_and_cap_facts
 from app.chat.rag.ingestion import ingest_patient_records
 from app.chat.rag.rag_db import count_embedded_chunks, rag_chunks_table_ready
@@ -70,6 +70,18 @@ class RAGOrchestrator:
         # ("resumez son dossier", "ses traitements ?") when no other patient is named.
         if not patient_id and session_patient_id and not detection_ambiguous:
             patient_id = session_patient_id
+
+        # Fallback: resolve patient from recent conversation turns when the current
+        # message only uses pronouns ("son dossier") and no session exists yet.
+        if not patient_id and conversation_history and not detection_ambiguous:
+            history_user_texts = [turn[0] for turn in conversation_history if turn[0]]
+            hist_id, hist_warnings, hist_name = detect_patient_from_texts(
+                self.db, history_user_texts
+            )
+            warnings.extend(hist_warnings)
+            if hist_id:
+                patient_id = hist_id
+                patient_display_name = hist_name
 
         # Authorization
         if patient_id:

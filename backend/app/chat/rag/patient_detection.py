@@ -237,7 +237,33 @@ def _extract_name_pairs(query: str) -> List[Tuple[str, str]]:
         add_pair(a, f"{b} {c}")
         add_pair(f"{a} {b}", c)
 
+    # Skip middle particles ("Fatima El Amrani" stored as first="Fatima", last="Amrani")
+    if len(tokens) >= 3:
+        add_pair(tokens[0], tokens[-1])
+
     return pairs
+
+
+def detect_patient_from_texts(
+    db: Session, texts: List[str]
+) -> Tuple[Optional[int], List[str], Optional[str]]:
+    """Try to resolve a patient from one or more prior user messages."""
+    warnings: List[str] = []
+    matches_by_id = {}
+    for text in texts:
+        if not text or not text.strip():
+            continue
+        pid, text_warnings, name = detect_patient_from_query(db, text)
+        warnings.extend(text_warnings)
+        if pid:
+            matches_by_id[pid] = name
+
+    if len(matches_by_id) == 1:
+        pid = next(iter(matches_by_id))
+        return pid, warnings, matches_by_id[pid]
+    if len(matches_by_id) > 1:
+        warnings.append("Multiple patients matched the conversation history. Please specify IPP.")
+    return None, warnings, None
 
 
 def _find_patients_by_single_token(db: Session, token: str) -> List[Patient]:
