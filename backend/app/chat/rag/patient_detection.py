@@ -112,13 +112,15 @@ def detect_patient_from_query(
             warnings.append("Multiple patients matched the provided name. Please specify IPP.")
             return None, warnings, None
 
-        # Compound surname alone ("... El Amrani")
-        for index in range(len(tokens) - 1):
-            combo = f"{tokens[index]} {tokens[index + 1]}"
+        # Compound surname alone ("... El Amrani") — always constrain by first name
+        if len(tokens) >= 2:
+            last_combo = " ".join(tokens[1:])
             combo_matches = (
                 db.query(Patient)
-                .filter(Patient.last_name.ilike(combo))
-                .limit(5)
+                .filter(
+                    Patient.first_name.ilike(tokens[0]),
+                    Patient.last_name.ilike(last_combo),
+                )
                 .all()
             )
             if len(combo_matches) == 1:
@@ -212,32 +214,74 @@ def _last_names_compatible(query_last: str, db_last: str) -> bool:
     return bool(stripped_query and stripped_db and stripped_query == stripped_db)
 
 
+def _name_token_splits(tokens: List[str]) -> List[Tuple[str, str]]:
+    """Build first/last splits for compound Moroccan names."""
+    splits: List[Tuple[str, str]] = []
+    if len(tokens) >= 2:
+        splits.append((tokens[0], " ".join(tokens[1:])))
+    if len(tokens) >= 3:
+        splits.append((f"{tokens[0]} {tokens[1]}", " ".join(tokens[2:])))
+    seen = set()
+    unique: List[Tuple[str, str]] = []
+    for pair in splits:
+        if pair not in seen:
+            seen.add(pair)
+            unique.append(pair)
+    return unique
+
+
 def _find_patients_by_name_tokens(db: Session, tokens: List[str]) -> List[Patient]:
-    """Match first token to first_name and remaining tokens to last_name (compound-safe)."""
+    """Match first token(s) to first_name and remaining tokens to last_name (compound-safe)."""
     if len(tokens) < 2:
         return []
 
-    first_raw = tokens[0]
-    last_raw = " ".join(tokens[1:])
-    nf = _normalize_person_name(first_raw)
-    nl = _normalize_person_name(last_raw)
+    matched_by_id: dict[int, Patient] = {}
+    for first_raw, last_raw in _name_token_splits(tokens):
+        exact = (
+            db.query(Patient)
+            .filter(
+                Patient.first_name.ilike(first_raw),
+                Patient.last_name.ilike(last_raw),
+            )
+            .all()
+        )
+        for patient in exact:
+            matched_by_id[patient.id] = patient
+
+    if matched_by_id:
+        return list(matched_by_id.values())
+
+    last_token = tokens[-1]
+    if len(last_token) < 3:
+        return []
+
+    nf = _normalize_person_name(tokens[0])
+    nl = _normalize_person_name(" ".join(tokens[1:]))
+    alt_first = (
+        _normalize_person_name(f"{tokens[0]} {tokens[1]}")
+        if len(tokens) >= 3
+        else None
+    )
+    alt_last = (
+        _normalize_person_name(" ".join(tokens[2:]))
+        if len(tokens) >= 3
+        else None
+    )
 
     candidates = (
         db.query(Patient)
-        .filter(Patient.first_name.ilike(first_raw))
-        .limit(200)
+        .filter(Patient.last_name.ilike(f"%{last_token}%"))
         .all()
     )
-
-    matched: List[Patient] = []
     for patient in candidates:
         pf = _normalize_person_name(patient.first_name or "")
         pl = _normalize_person_name(patient.last_name or "")
-        if pf != nf:
-            continue
-        if pl == nl or _last_names_compatible(nl, pl):
-            matched.append(patient)
-    return matched
+        if pf == nf and pl == nl:
+            matched_by_id[patient.id] = patient
+        elif alt_first and alt_last and pf == alt_first and pl == alt_last:
+            matched_by_id[patient.id] = patient
+
+    return list(matched_by_id.values())
 
 
 def _find_patients_by_name_pair(db: Session, first_t: str, last_t: str) -> List[Patient]:
@@ -267,8 +311,10 @@ def _find_patients_by_name_pair(db: Session, first_t: str, last_t: str) -> List[
 
     candidates = (
         db.query(Patient)
-        .filter(Patient.first_name.ilike(first_t))
-        .limit(200)
+        .filter(
+            Patient.first_name.ilike(first_t),
+            Patient.last_name.ilike(f"%{last_t.split()[-1]}%"),
+        )
         .all()
     )
     matched = []
