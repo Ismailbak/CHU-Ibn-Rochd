@@ -15,7 +15,7 @@ from app.models.patient import Patient
 logger = logging.getLogger(__name__)
 
 IPP_PATTERN = re.compile(
-    r"\b(?:ipp|score\s*ipp)\s*[:=]?\s*([A-Z]{2}\d{6,8}|\d{1,8})\b",
+    r"\b(?:ipp|score\s*ipp)\s*[:=]?\s*([A-Za-z0-9][A-Za-z0-9-]{0,19})\b",
     re.IGNORECASE,
 )
 
@@ -33,7 +33,9 @@ NAME_STOPWORDS = {
     "info", "infos", "information", "informations",
     "je", "ne", "pas", "sans", "aucun", "aucune", "se", "son", "sa",
     "ses", "elle", "il", "lui", "leur", "leurs", "doit", "devrait",
-    "resume", "résume", "resumer", "résumer", "situation", "bilan",
+    "resume", "résume", "resumer", "résumer", "resumez", "résumez",
+    "montre", "montrer", "montrez", "affiche", "afficher", "affichez",
+    "situation", "bilan",
     "presenter", "présenter", "parle", "parler", "donne", "donner",
 }
 
@@ -76,6 +78,7 @@ def detect_patient_from_query(
             warnings.append(f"Patient with IPP '{ipp_value}' not found.")
         return None, warnings, None
 
+    tokens = _extract_name_tokens(query)
     candidate_pairs = _extract_name_pairs(query)
     if candidate_pairs:
         matches_by_id = {}
@@ -83,10 +86,37 @@ def detect_patient_from_query(
             for patient in _find_patients_by_name_pair(db, first_t, last_t):
                 matches_by_id[patient.id] = patient
 
+        # Compound surname mentioned alone ("... de El Amrani")
+        if not matches_by_id:
+            for index in range(len(tokens) - 1):
+                combo = f"{tokens[index]} {tokens[index + 1]}"
+                for patient in (
+                    db.query(Patient)
+                    .filter(
+                        or_(
+                            Patient.last_name.ilike(combo),
+                            Patient.first_name.ilike(combo),
+                        )
+                    )
+                    .limit(5)
+                    .all()
+                ):
+                    matches_by_id[patient.id] = patient
+
         if len(matches_by_id) == 1:
             patient = next(iter(matches_by_id.values()))
             return patient.id, warnings, _patient_display_name(patient)
         if len(matches_by_id) > 1:
+            warnings.append("Multiple patients matched the provided name. Please specify IPP.")
+        return None, warnings, None
+
+    # Lone name after "patient(e)" (e.g. "patiente Amrani") — accept only a unique match
+    if len(tokens) == 1 and re.search(r"\bpatiente?\b", query, re.IGNORECASE):
+        single_matches = _find_patients_by_single_token(db, tokens[0])
+        if len(single_matches) == 1:
+            patient = single_matches[0]
+            return patient.id, warnings, _patient_display_name(patient)
+        if len(single_matches) > 1:
             warnings.append("Multiple patients matched the provided name. Please specify IPP.")
         return None, warnings, None
 
@@ -191,12 +221,40 @@ def _extract_name_pairs(query: str) -> List[Tuple[str, str]]:
     tokens = _extract_name_tokens(query)
     pairs: List[Tuple[str, str]] = []
 
-    for index in range(len(tokens) - 1):
-        first_t, last_t = tokens[index], tokens[index + 1]
+    def add_pair(first_t: str, last_t: str) -> None:
         if len(first_t) < 2 or len(last_t) < 2:
-            continue
+            return
         pair = (first_t, last_t)
         if pair not in pairs:
             pairs.append(pair)
 
+    for index in range(len(tokens) - 1):
+        add_pair(tokens[index], tokens[index + 1])
+
+    # Compound names ("Fatima El Amrani" → first="fatima", last="el amrani")
+    for index in range(len(tokens) - 2):
+        a, b, c = tokens[index], tokens[index + 1], tokens[index + 2]
+        add_pair(a, f"{b} {c}")
+        add_pair(f"{a} {b}", c)
+
     return pairs
+
+
+def _find_patients_by_single_token(db: Session, token: str) -> List[Patient]:
+    """Match a lone name token against first or last name (incl. compound last names)."""
+    if len(token) < 3:
+        return []
+    matches = (
+        db.query(Patient)
+        .filter(
+            or_(
+                Patient.first_name.ilike(token),
+                Patient.last_name.ilike(token),
+                Patient.last_name.ilike(f"% {token}"),
+                Patient.last_name.ilike(f"{token} %"),
+            )
+        )
+        .limit(5)
+        .all()
+    )
+    return matches

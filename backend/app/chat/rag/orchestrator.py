@@ -34,6 +34,8 @@ class RAGOrchestrator:
         self,
         request: ChatRequest,
         user_id: int,
+        session_patient_id: Optional[int] = None,
+        conversation_history: Optional[List[Tuple[str, str]]] = None,
     ) -> Tuple[str, GroundedChatResponse, list, Optional[int], Optional[str]]:
         warnings: List[str] = []
         patient_id = request.patient_id
@@ -49,15 +51,25 @@ class RAGOrchestrator:
         )
 
         # Auto-detect only when not explicitly provided
+        detection_ambiguous = False
         if not patient_id and rag_config.AUTO_DETECT_ENABLED:
             detected_id, detect_warnings, detected_name = detect_patient_from_query(
                 self.db, request.query
             )
-            warnings.extend(detect_warnings)
             if detected_id:
                 patient_id = detected_id
                 detected_patient_id = detected_id
                 patient_display_name = detected_name
+            elif detect_warnings:
+                # User named a patient we couldn't resolve — surface it and
+                # do NOT silently fall back to the session's patient.
+                detection_ambiguous = True
+            warnings.extend(detect_warnings)
+
+        # Sticky scope: keep the conversation's patient for follow-up questions
+        # ("resumez son dossier", "ses traitements ?") when no other patient is named.
+        if not patient_id and session_patient_id and not detection_ambiguous:
+            patient_id = session_patient_id
 
         # Authorization
         if patient_id:
@@ -148,6 +160,7 @@ class RAGOrchestrator:
             language=language,
             detected_from_ipp=detected_patient_id is not None,
             patient_display_name=patient_display_name,
+            conversation_history=conversation_history,
         )
 
         if retrieval_type == "none":

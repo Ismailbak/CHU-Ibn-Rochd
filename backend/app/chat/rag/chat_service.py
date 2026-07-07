@@ -85,10 +85,41 @@ async def get_grounded_chat_response(
         dict with grounded response, sources, confidence, and metadata
     """
     try:
+        from app.models.chat_session import ChatSession
+
         # Initialize orchestrator
         patient_service = PatientService(db)
         orchestrator = RAGOrchestrator(db, patient_service)
-        
+
+        # Resolve the open session BEFORE retrieval so follow-up questions
+        # ("resumez son dossier") keep the conversation's patient scope.
+        existing_session = None
+        session_patient_id = None
+        if session_id:
+            existing_session = db.query(ChatSession).filter(
+                ChatSession.id == session_id,
+                ChatSession.created_by == user_id,
+            ).first()
+            if existing_session:
+                session_patient_id = existing_session.patient_id
+
+        # Recent turns from this session give the LLM conversational context.
+        conversation_history = []
+        if existing_session:
+            recent_messages = (
+                db.query(ChatMessage)
+                .filter(
+                    ChatMessage.session_id == existing_session.id,
+                    ChatMessage.user_id == user_id,
+                )
+                .order_by(ChatMessage.created_at.desc())
+                .limit(4)
+                .all()
+            )
+            conversation_history = [
+                (m.message or "", m.response or "") for m in reversed(recent_messages)
+            ]
+
         # Build RAG request
         rag_request = RAGChatRequest(
             query=message,
@@ -105,7 +136,12 @@ async def get_grounded_chat_response(
             warnings,
             detected_patient_id,
             detected_patient_name,
-        ) = await orchestrator.process_chat_request(rag_request, user_id=user_id)
+        ) = await orchestrator.process_chat_request(
+            rag_request,
+            user_id=user_id,
+            session_patient_id=session_patient_id,
+            conversation_history=conversation_history,
+        )
 
         final_patient_id = patient_id or detected_patient_id
         final_patient_name = detected_patient_name
@@ -158,11 +194,12 @@ async def get_grounded_chat_response(
         elif rag_response.metadata.confidence == "low":
             system_msg += "\n\nLimited evidence — state uncertainty clearly."
         
-        # Call LLM with grounded prompt
+        # Call LLM with grounded prompt (low temperature: factual dossier answers)
         llm_result = llm.generate(
             prompt=grounded_prompt,
             system=system_msg,
-            language=language
+            language=language,
+            temperature=0.3,
         )
         
         # Update response with LLM output
@@ -183,18 +220,11 @@ async def get_grounded_chat_response(
         try:
             # Import chat_service for session management
             from app.chat.service import create_chat_session
-            from app.models.chat_session import ChatSession
-            
-            # Prefer the currently open session when the frontend provides it.
-            existing_session = None
-            if resolved_session_id:
-                existing_session = db.query(ChatSession).filter(
-                    ChatSession.id == resolved_session_id,
-                    ChatSession.created_by == user_id,
-                ).first()
-                if existing_session:
-                    resolved_session_id = existing_session.id
-                    final_patient_id = final_patient_id or existing_session.patient_id
+
+            # Prefer the currently open session (already resolved before retrieval).
+            if existing_session:
+                resolved_session_id = existing_session.id
+                final_patient_id = final_patient_id or existing_session.patient_id
 
             # Create or get chat session if patient is identified
             if final_patient_id:

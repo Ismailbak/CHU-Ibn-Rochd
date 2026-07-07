@@ -82,12 +82,16 @@ class LLMModel:
                 "model": self.model_name,
                 "prompt": prompt,
                 "stream": False,
+                # Keep the model loaded between requests to avoid cold-start latency
+                "keep_alive": kwargs.get("keep_alive", "30m"),
                 "options": {
                     "temperature": kwargs.get("temperature", 0.7),
                     "top_p": kwargs.get("top_p", 0.9),
                     "top_k": kwargs.get("top_k", 40),
                 }
             }
+            if kwargs.get("num_predict"):
+                payload["options"]["num_predict"] = kwargs["num_predict"]
             
             if system:
                 payload["system"] = system

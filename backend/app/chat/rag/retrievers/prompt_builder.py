@@ -4,8 +4,11 @@ Deterministic prompt construction with grounded evidence sections.
 Separates retrieval from generation for auditability.
 """
 
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from app.chat.rag.retrievers.structured_retriever import RetrievedFact
+
+MAX_HISTORY_TURNS = 6
+MAX_HISTORY_CHARS = 400
 
 
 class PromptTemplate:
@@ -62,6 +65,7 @@ class PromptBuilder:
         language: str = "en",
         detected_from_ipp: bool = False,
         patient_display_name: Optional[str] = None,
+        conversation_history: Optional[List[Tuple[str, str]]] = None,
     ) -> str:
         sections = []
 
@@ -76,6 +80,10 @@ class PromptBuilder:
         )
         sections.append(context_section)
 
+        history_section = self._build_history_section(conversation_history, language)
+        if history_section:
+            sections.append(history_section)
+
         if retrieved_facts:
             evidence_section = self._build_evidence_section(retrieved_facts, detected_from_ipp)
             sections.append(evidence_section)
@@ -87,6 +95,33 @@ class PromptBuilder:
         sections.append(self._build_response_instruction(language, patient_id, bool(retrieved_facts)))
 
         return "\n".join(sections)
+
+    def _build_history_section(
+        self,
+        conversation_history: Optional[List[Tuple[str, str]]],
+        language: str,
+    ) -> Optional[str]:
+        if not conversation_history:
+            return None
+
+        turns = conversation_history[-MAX_HISTORY_TURNS:]
+        user_label, assistant_label = (
+            ("Utilisateur", "Assistant") if language == "fr" else ("User", "Assistant")
+        )
+        header = (
+            "\nCONVERSATION RÉCENTE (pour le contexte — les pronoms comme « son dossier » "
+            "se réfèrent à cette conversation):"
+            if language == "fr"
+            else "\nRECENT CONVERSATION (for context — pronouns refer to this conversation):"
+        )
+
+        lines = [header]
+        for user_msg, assistant_msg in turns:
+            if user_msg:
+                lines.append(f"{user_label}: {user_msg[:MAX_HISTORY_CHARS]}")
+            if assistant_msg:
+                lines.append(f"{assistant_label}: {assistant_msg[:MAX_HISTORY_CHARS]}")
+        return "\n".join(lines)
 
     def _build_context_section(
         self,
@@ -159,6 +194,9 @@ class PromptBuilder:
                     "\nRÉPONSE:\n"
                     "Synthèse clinique directe en français, ton naturel et professionnel. "
                     "Couvrez les éléments pertinents présents dans les preuves. "
+                    "Si le message est seulement un nom de patient, faites une brève synthèse "
+                    "du dossier (identité, diagnostic, actes récents, résultats, suivi) sans "
+                    "demander de précision. "
                     "Pas de formule du type « Veuillez fournir le dossier »."
                 )
             if patient_id and not has_facts:
