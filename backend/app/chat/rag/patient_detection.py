@@ -190,8 +190,23 @@ def _strip_name_particles(name: str) -> str:
 def _last_names_compatible(query_last: str, db_last: str) -> bool:
     if query_last == db_last:
         return True
-    if query_last and db_last and (db_last.endswith(query_last) or query_last.endswith(db_last)):
+
+    query_parts = query_last.split()
+    db_parts = db_last.split()
+    query_has_particle = bool(query_parts and query_parts[0] in NAME_PARTICLES)
+    db_has_particle = bool(db_parts and db_parts[0] in NAME_PARTICLES)
+
+    # Query includes a particle ("el amrani") — require full compound, not "amrani" alone
+    if query_has_particle:
+        return False
+
+    # Query without particle can match DB compound surname ("Amrani" → "El Amrani")
+    if db_has_particle:
+        return query_last == _strip_name_particles(db_last)
+
+    if db_last.endswith(f" {query_last}") or query_last.endswith(f" {db_last}"):
         return True
+
     stripped_query = _strip_name_particles(query_last)
     stripped_db = _strip_name_particles(db_last)
     return bool(stripped_query and stripped_db and stripped_query == stripped_db)
