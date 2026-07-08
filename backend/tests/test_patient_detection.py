@@ -191,6 +191,39 @@ class TestPatientDetectionMatrix:
         assert pid == 7
         assert warnings == []
 
+    def test_inverted_two_token_name_with_keyword(self, db, enable_auto_detect):
+        seed(db, _patient(8, "Ismail", "Bakraoui"))
+        pid, warnings, name = detect_patient_from_query(db, "patient Bakraoui Ismail")
+        assert pid == 8
+        assert warnings == []
+        assert name == "Ismail Bakraoui"
+
+    def test_inverted_two_token_name_without_keyword(self, db, enable_auto_detect):
+        seed(db, _patient(8, "Ismail", "Bakraoui"))
+        pid, warnings, _ = detect_patient_from_query(db, "Bakraoui Ismail")
+        assert pid == 8
+        assert warnings == []
+
+    def test_inverted_compound_name(self, db, enable_auto_detect):
+        seed(db, _patient(9, "Fatima", "El Amrani", "2026-0042"))
+        pid, warnings, name = detect_patient_from_query(db, "El Amrani Fatima")
+        assert pid == 9
+        assert warnings == []
+        assert name == "Fatima El Amrani"
+
+    def test_all_caps_surname_first(self, db, enable_auto_detect):
+        seed(db, _patient(10, "Hassan", "MOUSTAKIM", "P018862"))
+        pid, warnings, name = detect_patient_from_query(
+            db, "Résume le dossier médical de MOUSTAKIM hassan"
+        )
+        assert pid == 10
+        assert warnings == []
+        assert name == "Hassan MOUSTAKIM"
+
+    def test_all_caps_proper_name_tokens_not_split(self):
+        spans = _capitalized_token_lists("dossier de MOUSTAKIM Hassan")
+        assert spans == [["moustakim", "hassan"]]
+
     def test_ambiguous_common_name(self, db, enable_auto_detect):
         seed(
             db,

@@ -40,6 +40,12 @@ CAPITALIZED_NAME_WORD = re.compile(
     re.UNICODE,
 )
 
+# Whole-word ALL CAPS tokens (e.g. MOUSTAKIM) — avoid splitting into single letters.
+ALL_CAPS_NAME_WORD = re.compile(
+    r"\b[A-ZÀ-ÖÙ-Ý]{2,}(?:[-'][A-ZÀ-ÖÙ-Ý]{2,})*\b",
+    re.UNICODE,
+)
+
 PATIENT_KEYWORDS = {"patient", "patiente", "patients", "patientes"}
 PREPOSITIONS = {"de", "du", "des"}
 
@@ -259,9 +265,30 @@ def _preposition_token_lists(lower: List[str]) -> List[List[str]]:
     return lists
 
 
+def _proper_name_words(query: str) -> List[str]:
+    """Extract Title-case and ALL-CAPS name-like words in query order."""
+    seen_spans: List[Tuple[int, int]] = []
+    words: List[str] = []
+
+    def append_match(match: re.Match) -> None:
+        start, end = match.span()
+        if any(start < e and end > s for s, e in seen_spans):
+            return
+        seen_spans.append((start, end))
+        words.append((start, match.group(0)))
+
+    for match in ALL_CAPS_NAME_WORD.finditer(query):
+        append_match(match)
+    for match in CAPITALIZED_NAME_WORD.finditer(query):
+        append_match(match)
+
+    words.sort(key=lambda item: item[0])
+    return [word for _, word in words]
+
+
 def _capitalized_token_lists(query: str) -> List[List[str]]:
-    """Extract sequences of capitalized words (typical proper names in French prose)."""
-    words = CAPITALIZED_NAME_WORD.findall(query)
+    """Extract sequences of proper-name words (Title case or ALL CAPS)."""
+    words = _proper_name_words(query)
     if len(words) < 2:
         return []
 
@@ -271,6 +298,7 @@ def _capitalized_token_lists(query: str) -> List[List[str]]:
         if w not in NAME_STOPWORDS
         and w not in PATIENT_KEYWORDS
         and w not in CAPITALIZED_SENTENCE_STARTERS
+        and len(w) >= 2
     ]
     if len(clean) >= 2:
         return [clean[:MAX_NAME_TOKENS]]
@@ -397,20 +425,30 @@ def _fuzzy_pair_match(
     return list(matched.values())
 
 
+def _pair_orientations(first_raw: str, last_raw: str) -> List[Tuple[str, str]]:
+    """Return (first, last) and swapped order when they differ."""
+    pairs = [(first_raw, last_raw)]
+    swapped = (last_raw, first_raw)
+    if swapped != pairs[0]:
+        pairs.append(swapped)
+    return pairs
+
+
 def _find_patients_by_name_tokens(db: Session, tokens: List[str]) -> List[Patient]:
     """
     Tiered matching per split (best split first — never merge weaker splits):
-    1. Exact ILIKE (with hyphen/space variants).
-    2. Accent/hyphen-insensitive equality.
+    1. Exact ILIKE (with hyphen/space variants), both first-last and last-first order.
+    2. Accent/hyphen-insensitive equality, both orders.
     3. Particle-stripped surname — only when the query omits surname particles.
     """
     if len(tokens) < 2:
         return []
 
     for first_raw, last_raw in _rank_name_splits(tokens):
-        matches = _sql_pair_match(db, first_raw, last_raw)
-        if matches:
-            return matches
+        for pair_first, pair_last in _pair_orientations(first_raw, last_raw):
+            matches = _sql_pair_match(db, pair_first, pair_last)
+            if matches:
+                return matches
 
     allow_particle_strip = not any(
         _last_name_has_leading_particle(_normalize_person_name(last))
@@ -418,41 +456,37 @@ def _find_patients_by_name_tokens(db: Session, tokens: List[str]) -> List[Patien
     )
 
     for first_raw, last_raw in _rank_name_splits(tokens):
-        matches = _fuzzy_pair_match(
-            db,
-            first_raw,
-            last_raw,
-            tokens,
-            allow_particle_strip=allow_particle_strip,
-        )
-        if matches:
-            return matches
+        for pair_first, pair_last in _pair_orientations(first_raw, last_raw):
+            matches = _fuzzy_pair_match(
+                db,
+                pair_first,
+                pair_last,
+                tokens,
+                allow_particle_strip=allow_particle_strip,
+            )
+            if matches:
+                return matches
 
     return []
 
 
 def _fuzzy_candidates(db: Session, tokens: List[str]) -> List[Patient]:
-    """Narrow candidate set for Python-side comparison."""
-    last_segment = re.split(r"[-'’]", tokens[-1])[-1]
-    first_segment = re.split(r"[-'’]", tokens[0])[-1]
-    segment = last_segment if len(last_segment) >= 3 else first_segment
-    if len(segment) < 3:
+    """Narrow candidate set for Python-side comparison (order-agnostic)."""
+    segments: List[str] = []
+    for token in tokens:
+        segment = re.split(r"[-'’]", token)[-1]
+        if len(segment) >= 3 and segment not in segments:
+            segments.append(segment)
+    if not segments:
         return []
 
-    query = db.query(Patient).filter(
-        or_(
+    filters = []
+    for segment in segments[:4]:
+        filters.extend([
             Patient.last_name.ilike(f"%{segment}%"),
             Patient.first_name.ilike(f"%{segment}%"),
-        )
-    )
-    if len(first_segment) >= 3:
-        query = query.filter(
-            or_(
-                Patient.first_name.ilike(tokens[0]),
-                Patient.first_name.ilike(f"%{first_segment}%"),
-            )
-        )
-    return query.limit(500).all()
+        ])
+    return db.query(Patient).filter(or_(*filters)).limit(500).all()
 
 
 # ---------------------------------------------------------------------------
