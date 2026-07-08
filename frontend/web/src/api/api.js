@@ -113,6 +113,8 @@ export const getCurrentUser = () => api.get('/auth/me');
 
 // Patients
 export const getPatients = (params = {}) => api.get('/patients/', { params });
+export const globalSearch = (q, limit = 5) =>
+  api.get('/search/', { params: { q, limit } });
 export const getPatient = (id) => api.get(`/patients/${id}`);
 export const createPatient = (data) => api.post('/patients/', data);
 export const updatePatient = (id, data) => api.put(`/patients/${id}`, data);

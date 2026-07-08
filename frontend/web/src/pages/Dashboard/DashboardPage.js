@@ -121,7 +121,7 @@ function DashboardPage() {
           todayAppointments: dashboard?.today_appointments || 0,
           medicalActs: dashboard?.medical_acts || 0,
           diagnosisRecords: dashboard?.diagnosis_records || 0,
-          commonDiagnoses: (dashboard?.common_diagnoses || []).map((diag, i) => ({
+          commonDiagnoses: (dashboard?.common_diagnoses || []).slice(0, 10).map((diag, i) => ({
             name: diag.name,
             value: diag.count,
             color: diagnosisColors[i % diagnosisColors.length]

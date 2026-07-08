@@ -214,7 +214,7 @@ def _candidate_token_lists(query: str) -> Tuple[List[List[str]], bool]:
     lists: List[List[str]] = []
 
     def append_unique(span: List[str]) -> None:
-        trimmed = span[:MAX_NAME_TOKENS]
+        trimmed = [t for t in span[:MAX_NAME_TOKENS] if len(t) >= 2]
         if len(trimmed) >= 2 and trimmed not in lists:
             lists.append(trimmed)
 
@@ -474,10 +474,12 @@ def _fuzzy_candidates(db: Session, tokens: List[str]) -> List[Patient]:
     """Narrow candidate set for Python-side comparison (order-agnostic)."""
     segments: List[str] = []
     for token in tokens:
+        if len(token) < 2:
+            continue
         segment = re.split(r"[-'’]", token)[-1]
         if len(segment) >= 3 and segment not in segments:
             segments.append(segment)
-    if not segments:
+    if len(segments) < 2:
         return []
 
     filters = []
@@ -486,7 +488,7 @@ def _fuzzy_candidates(db: Session, tokens: List[str]) -> List[Patient]:
             Patient.last_name.ilike(f"%{segment}%"),
             Patient.first_name.ilike(f"%{segment}%"),
         ])
-    return db.query(Patient).filter(or_(*filters)).limit(500).all()
+    return db.query(Patient).filter(or_(*filters)).limit(200).all()
 
 
 # ---------------------------------------------------------------------------

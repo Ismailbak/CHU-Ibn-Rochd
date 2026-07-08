@@ -201,7 +201,7 @@ def get_dashboard_summary(
         .scalar() or 0
     )
 
-    common_diagnoses = analytics_service.get_top_act_diagnoses(db, start_date=None, limit=None)
+    common_diagnoses = analytics_service.get_top_act_diagnoses(db, start_date=None, limit=12)
     diagnosis_records = db.query(func.count(ActDiagnosisModel.id)).scalar() or 0
 
     appointment_day = cast(AppointmentModel.datetime_scheduled, Date)

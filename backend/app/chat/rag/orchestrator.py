@@ -22,8 +22,9 @@ logger = logging.getLogger(__name__)
 
 
 class RAGOrchestrator:
-    def __init__(self, db_session, patient_service, llm_service=None):
+    def __init__(self, db_session, patient_service, llm_service=None, detection_db=None):
         self.db = db_session
+        self.detection_db = detection_db or db_session
         self.patient_service = patient_service
         self.llm_service = llm_service
         self.classifier = QueryClassifier()
@@ -54,7 +55,7 @@ class RAGOrchestrator:
         detection_ambiguous = False
         if not patient_id and rag_config.AUTO_DETECT_ENABLED:
             detected_id, detect_warnings, detected_name = detect_patient_from_query(
-                self.db, request.query
+                self.detection_db, request.query
             )
             if detected_id:
                 patient_id = detected_id
@@ -76,7 +77,7 @@ class RAGOrchestrator:
         if not patient_id and conversation_history and not detection_ambiguous:
             history_user_texts = [turn[0] for turn in conversation_history if turn[0]]
             hist_id, hist_warnings, hist_name = detect_patient_from_texts(
-                self.db, history_user_texts
+                self.detection_db, history_user_texts
             )
             warnings.extend(hist_warnings)
             if hist_id:

@@ -39,6 +39,7 @@ from app.models.form_system import ActForm, FormCsRd, RefActType, RefCareType, R
 from app.models.llm import llm
 from app.notifications.router import router as notifications_router
 from app.patients.router import router as patients_router
+from app.search.router import router as search_router
 
 app = FastAPI(
     title="Medical AI Assistant",
@@ -70,6 +71,7 @@ app.include_router(forms_router, prefix="/api/forms", tags=["forms"])
 app.include_router(chat_router, prefix="/api/chat", tags=["chat"])
 app.include_router(analytics_router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(notifications_router, prefix="/api/notifications", tags=["notifications"])
+app.include_router(search_router, prefix="/api/search", tags=["search"])
 
 # Serve static files (uploads)
 uploads_dir = Path("data/uploads")

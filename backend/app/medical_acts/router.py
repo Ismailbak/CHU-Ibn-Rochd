@@ -22,7 +22,7 @@ from app.auth.router import get_current_user_orm
 from app.auth.permissions import require_clinical_delete
 from app.models.user import User
 from app.analytics.audit import log_action
-from app.models.form_system import ActForm, DynamicFormResponse, RefFormType
+from app.core.utils.patient_search import apply_patient_search, patient_search_clause
 
 # Ensure upload directory exists
 UPLOAD_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "uploads"))
@@ -371,19 +371,26 @@ def get_medical_acts(
     if act_type:
         query = query.filter(MedicalActModel.act_type == act_type)
     if q:
-        term = f"%{q.strip()}%"
-        query = query.outerjoin(PatientModel, PatientModel.id == MedicalActModel.patient_id).filter(
-            or_(
-                cast(MedicalActModel.id, String).like(term),
-                cast(MedicalActModel.patient_id, String).like(term),
-                MedicalActModel.description.like(term),
-                MedicalActModel.report.like(term),
-                MedicalActModel.notes.like(term),
-                PatientModel.first_name.like(term),
-                PatientModel.last_name.like(term),
-                PatientModel.ipp.like(term),
-            )
+        term = q.strip()
+        like_term = f"%{term}%"
+        patient_clause = patient_search_clause(term)
+        identity_match = (
+            db.query(PatientModel.id)
+            .filter(patient_clause)
+            .subquery()
+            if patient_clause is not None
+            else None
         )
+        filters = [
+            cast(MedicalActModel.id, String).like(like_term),
+            MedicalActModel.description.like(like_term),
+            MedicalActModel.report.like(like_term),
+            MedicalActModel.notes.like(like_term),
+            MedicalActModel.act_type.like(like_term),
+        ]
+        if identity_match is not None:
+            filters.append(MedicalActModel.patient_id.in_(identity_match))
+        query = query.filter(or_(*filters))
 
     total = query.count()
     response.headers["X-Total-Count"] = str(total)

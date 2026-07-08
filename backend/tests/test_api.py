@@ -73,3 +73,13 @@ def test_analytics_recent_activity_excludes_future():
         assert activity.get("time"), "activity must have a time"
         activity_time = datetime.fromisoformat(activity["time"])
         assert activity_time <= now, f"future activity returned: {activity}"
+
+
+def test_global_search_endpoint():
+    response = client.get("/api/search/", params={"q": "test", "limit": 3})
+    assert response.status_code == 200
+    data = response.json()
+    assert "patients" in data
+    assert "appointments" in data
+    assert "acts" in data
+    assert isinstance(data["patients"], list)

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FiSearch, FiMenu, FiFileText, FiShield, FiX, FiMessageSquare, FiUser, FiCalendar, FiActivity } from 'react-icons/fi';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { getPatients } from '../../api/api';
+import { globalSearch } from '../../api/api';
 import './Header.css';
 
 const navTabs = [
@@ -62,17 +62,34 @@ function Header() {
     const timer = setTimeout(async () => {
       setSearchLoading(true);
       try {
-        const patientsRes = await getPatients({ q: query, limit: 5 });
-        const patients = (patientsRes.data || []).map((p) => {
+        const res = await globalSearch(query, 5);
+        const data = res.data || {};
+        const patients = (data.patients || []).map((p) => {
           const age = calculateAge(p.date_of_birth);
           return {
             id: p.id,
             name: `${p.first_name} ${p.last_name}`,
-            detail: `${age ? `${age} ans` : ''} • ${p.primary_diagnosis || 'N/A'}`,
+            detail: `${p.ipp ? `IPP ${p.ipp} • ` : ''}${age ? `${age} ans` : ''}${p.primary_diagnosis ? ` • ${p.primary_diagnosis}` : ''}`.replace(/^ • /, ''),
             avatar: p.gender?.toLowerCase() === 'femme' ? '👩' : '👨',
           };
         });
-        setSearchResults({ patients, appointments: [], acts: [] });
+        const appointments = (data.appointments || []).map((apt) => ({
+          id: apt.id,
+          patientName: apt.patient_name,
+          detail: apt.datetime_scheduled
+            ? new Date(apt.datetime_scheduled).toLocaleString('fr-FR')
+            : '',
+          reason: apt.reason || '',
+        }));
+        const acts = (data.acts || []).map((act) => ({
+          id: act.id,
+          patientName: act.patient_name,
+          detail: act.act_date
+            ? new Date(act.act_date).toLocaleDateString('fr-FR')
+            : '',
+          actType: act.act_type || act.description || 'Acte',
+        }));
+        setSearchResults({ patients, appointments, acts });
         setShowResults(true);
       } catch {
         setSearchResults({ patients: [], appointments: [], acts: [] });
@@ -170,8 +187,8 @@ function Header() {
                           >
                             <span className="result-icon"><FiCalendar /></span>
                             <div className="result-info">
-                              <span className="result-name">{apt.patient}</span>
-                              <span className="result-detail">{apt.type} • {apt.time}</span>
+                              <span className="result-name">{apt.patientName}</span>
+                              <span className="result-detail">{apt.reason ? `${apt.reason} • ` : ''}{apt.detail}</span>
                             </div>
                           </div>
                         ))}
@@ -192,8 +209,8 @@ function Header() {
                           >
                             <span className="result-icon"><FiActivity /></span>
                             <div className="result-info">
-                              <span className="result-name">{act.name}</span>
-                              <span className="result-detail">{act.patient}</span>
+                              <span className="result-name">{act.actType}</span>
+                              <span className="result-detail">{act.patientName}{act.detail ? ` • ${act.detail}` : ''}</span>
                             </div>
                           </div>
                         ))}

@@ -94,7 +94,7 @@ async def get_grounded_chat_response(
         rag_session = rag_db if rag_db is not None else db
         try:
             patient_service = PatientService(db)
-            orchestrator = RAGOrchestrator(rag_session, patient_service)
+            orchestrator = RAGOrchestrator(rag_session, patient_service, detection_db=db)
 
             # Resolve the open session BEFORE retrieval so follow-up questions
             # ("resumez son dossier") keep the conversation's patient scope.

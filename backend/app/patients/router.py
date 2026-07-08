@@ -18,6 +18,7 @@ from app.models.appointment import Appointment
 from app.models.act_result import ActResult
 from app.analytics.audit import log_action
 from app.core.utils.text_encoding import repair_text
+from app.core.utils.patient_search import apply_patient_search
 from app.pdf import service as pdf_service
 from app.patients.deletion import delete_patient_cascade
 
@@ -316,27 +317,7 @@ def get_patients(
 ):
     query = db.query(PatientModel)
     if q:
-        q_filter = f"%{q}%"
-        act_diag_match = (
-            exists()
-            .where(
-                MedicalAct.patient_id == PatientModel.id,
-                ActDiagnosis.act_id == MedicalAct.id,
-                ActDiagnosis.diagnosis_label.ilike(q_filter),
-            )
-        )
-        query = query.filter(
-            or_(
-                PatientModel.first_name.ilike(q_filter),
-                PatientModel.last_name.ilike(q_filter),
-                PatientModel.ipp.ilike(q_filter),
-                PatientModel.phone.ilike(q_filter),
-                PatientModel.city.ilike(q_filter),
-                PatientModel.address.ilike(q_filter),
-                PatientModel.primary_diagnosis.ilike(q_filter),
-                act_diag_match,
-            )
-        )
+        query = apply_patient_search(query, q)
     if ipp:
         query = query.filter(PatientModel.ipp.ilike(f"%{ipp}%"))
     if first_name:

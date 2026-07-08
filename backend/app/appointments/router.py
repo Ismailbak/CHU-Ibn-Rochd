@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel
 from typing import List, Optional
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from datetime import datetime, date, time
 
 from app.core.database import get_db
@@ -11,6 +12,7 @@ from app.auth.router import get_current_user_orm
 from app.auth.permissions import require_clinical_delete
 from app.models.user import User
 from app.analytics.audit import log_action
+from app.core.utils.patient_search import patient_search_clause
 
 router = APIRouter()
 
@@ -75,6 +77,7 @@ def get_appointments(
     db: Session = Depends(get_db),
     from_date: Optional[str] = Query(None, description="Inclusive start date (YYYY-MM-DD)"),
     to_date: Optional[str] = Query(None, description="Inclusive end date (YYYY-MM-DD)"),
+    q: Optional[str] = Query(None, description="Search patient name, IPP, or reason"),
     limit: Optional[int] = Query(None, ge=1, le=5000),
     offset: int = Query(0, ge=0),
 ):
@@ -85,6 +88,20 @@ def get_appointments(
     if to_date:
         end_dt = datetime.combine(_parse_date_param(to_date), time.max)
         query = query.filter(AppointmentModel.datetime_scheduled <= end_dt)
+
+    if q:
+        term = q.strip()
+        clause = patient_search_clause(term)
+        if clause is not None:
+            patient_ids = db.query(PatientModel.id).filter(clause).subquery()
+            query = query.filter(
+                or_(
+                    AppointmentModel.patient_id.in_(patient_ids),
+                    AppointmentModel.reason.ilike(f"%{term}%"),
+                )
+            )
+        else:
+            query = query.filter(AppointmentModel.reason.ilike(f"%{term}%"))
 
     total = query.count()
     response.headers["X-Total-Count"] = str(total)
