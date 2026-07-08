@@ -7,6 +7,7 @@ import {
   sendChatMessageWithAttachment,
 } from '../../api/api';
 import { ConfirmDialog, SourceCitationPanel } from '../../components/common';
+import AssistantMessageContent from './components/AssistantMessageContent';
 import {
   FiActivity,
   FiAlertCircle,
@@ -668,7 +669,7 @@ function Chat({ patientId, currentUser }) {
                     <strong>RhumatoAI</strong>
                     <span>{formatMessageTime(new Date())}</span>
                   </div>
-                  <p>Bonjour {assistantAddressName} ! Je suis votre assistant IA médical. Comment puis-je vous aider aujourd&apos;hui ?</p>
+                  <p className="assistant-message-text">Bonjour {assistantAddressName} ! Je suis votre assistant IA médical. Comment puis-je vous aider aujourd&apos;hui ?</p>
                 </div>
               </div>
             )}
@@ -683,7 +684,11 @@ function Chat({ patientId, currentUser }) {
                     <strong>{msg.role === 'user' ? 'Vous' : msg.role === 'error' ? 'Erreur' : 'RhumatoAI'}</strong>
                     <span>{formatMessageTime(msg.timestamp)}</span>
                   </div>
-                  <p>{msg.content}</p>
+                  {msg.role === 'assistant' ? (
+                    <AssistantMessageContent content={msg.content} />
+                  ) : (
+                    <p className="assistant-message-text">{msg.content}</p>
+                  )}
                   {msg.role === 'error' && msg.failedPrompt && (
                     <button className="assistant-retry-btn" onClick={() => handleRetryFailed(msg.failedPrompt, msg.id)}>
                       <FiRefreshCw /> Réessayer

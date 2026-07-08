@@ -490,12 +490,66 @@
   color: rgba(255, 255, 255, 0.8);
 }
 
-.assistant-bubble p {
+.assistant-bubble p,
+.assistant-message-text {
   margin: 0;
   font-size: 13px;
   line-height: 1.65;
   overflow-wrap: anywhere;
-  white-space: pre-wrap;
+}
+
+.assistant-message-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.assistant-message-body .assistant-message-text {
+  margin: 0;
+}
+
+.assistant-message-ol-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.assistant-message-ol-num {
+  flex-shrink: 0;
+  min-width: 1.25rem;
+  font-weight: 700;
+  color: var(--assistant-primary, #0f766e);
+}
+
+.assistant-message-ol-text {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.assistant-message-list-md {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.assistant-message-list-md li {
+  margin-bottom: 6px;
+}
+
+.assistant-message-list-md li:last-child {
+  margin-bottom: 0;
+}
+
+.assistant-message-body strong {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.assistant-message-user .assistant-message-body strong {
+  color: #ffffff;
 }
 
 .assistant-patient-context {
