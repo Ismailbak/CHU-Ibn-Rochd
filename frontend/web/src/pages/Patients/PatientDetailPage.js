@@ -237,7 +237,15 @@ function PatientDetailPage() {
           <div className="patient-main-info">
             <div className="patient-avatar-large">{patient.first_name?.charAt(0)?.toUpperCase() || '?'}</div>
             <div className="patient-identity">
-              <h1>{patient.first_name} {patient.last_name}</h1>
+              <div className="patient-name-row">
+                <h1>{patient.first_name} {patient.last_name}</h1>
+                {patient.ipp && (
+                  <span className="patient-ipp-badge" title="Identifiant Permanent Patient">
+                    <span className="patient-ipp-label">IPP</span>
+                    {patient.ipp}
+                  </span>
+                )}
+              </div>
               <p className="patient-meta-info">
                 {calculateAge(patient.date_of_birth)} ans • {patient.gender} • Né(e) le {formatDate(patient.date_of_birth)}
               </p>
