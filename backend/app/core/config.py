@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     # Database: mysql+pymysql://USER:PASSWORD@HOST:3306/DATABASE
     DATABASE_URL: str = "mysql+pymysql://root:@localhost:3306/rhumatoai"
 
+    # Secondary DB for RAG reads (rhumatoai_sec). When set, assistant retrieval
+    # uses this database instead of DATABASE_URL.
+    RAG_DATABASE_URL: str | None = None
+
     SECRET_KEY: str = "change-this-secret-key"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
@@ -46,6 +50,14 @@ class Settings(BaseSettings):
         if self.CREATE_TABLES_ON_STARTUP is not None:
             return self.CREATE_TABLES_ON_STARTUP
         return not self.is_production
+
+    @property
+    def rag_database_url(self) -> str:
+        return self.RAG_DATABASE_URL or self.DATABASE_URL
+
+    @property
+    def use_rag_secondary(self) -> bool:
+        return bool(self.RAG_DATABASE_URL) and self.RAG_DATABASE_URL != self.DATABASE_URL
 
 
 settings = Settings()

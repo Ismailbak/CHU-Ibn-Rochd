@@ -114,6 +114,7 @@ VM **4020** also has a **second NIC** on `10.13.19.120` for direct access if rou
 ```bash
 APP_ENV=production
 DATABASE_URL=mysql+pymysql://rhumato_app:App123@192.168.11.10:3306/rhumatoai
+RAG_DATABASE_URL=mysql+pymysql://ia_sync:App123@192.168.11.10:3306/rhumatoai_sec
 SECRET_KEY=<long-random-secret>
 CORS_ORIGINS="http://192.168.11.20,http://10.13.19.120,http://10.13.19.111:8080,http://rheuma.local"
 OLLAMA_HOST=http://192.168.11.30:11434
@@ -353,6 +354,31 @@ cd /opt/ia-medical/backend && source .venv/bin/activate
 alembic upgrade head               # apply DB migrations
 python scripts/setup_admin.py      # (re)create admin — needs ADMIN_PASSWORD
 ```
+
+### Secondary DB sync (primary → rhumatoai_sec for RAG)
+
+The app **writes only** to `rhumatoai`. The assistant **reads** from `rhumatoai_sec` after sync.
+
+**First-time setup** (4020, env loaded):
+
+```bash
+cd /opt/ia-medical/backend && source .venv/bin/activate
+python -m scripts.sync_rag_database --init-schema
+```
+
+**Regular sync** (run manually or via cron every 5–15 min):
+
+```bash
+python -m scripts.sync_rag_database
+```
+
+**Cron example** (as `ismailbak` on 4020):
+
+```bash
+*/10 * * * * set -a && source /etc/ia-medical/env && set +a && cd /opt/ia-medical/backend && .venv/bin/python -m scripts.sync_rag_database >> /var/log/rhumato-sync.log 2>&1
+```
+
+**MySQL user on 4010** — `ia_sync` needs write access to `rhumatoai_sec` only; the app reads primary with `rhumato_app` and writes secondary with `ia_sync` during sync.
 
 ---
 
