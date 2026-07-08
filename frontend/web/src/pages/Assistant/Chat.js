@@ -29,6 +29,27 @@ import {
 import './Chat.css';
 import { getAssistantAddressName } from '../../utils/userGreeting';
 
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    if (!document.execCommand('copy')) {
+      throw new Error('execCommand copy failed');
+    }
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
+
 const generateId = () => {
   return typeof crypto !== 'undefined' && crypto.randomUUID 
     ? crypto.randomUUID() 
@@ -225,16 +246,12 @@ function Chat({ patientId, currentUser }) {
 
   const handleCopyMessage = async (messageId, content) => {
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(content);
-        if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
-        setCopiedMessageId(messageId);
-        copyTimeoutRef.current = setTimeout(() => setCopiedMessageId(null), 2000);
-      } else {
-        throw new Error("Clipboard API not available");
-      }
+      await copyTextToClipboard(content);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      setCopiedMessageId(messageId);
+      copyTimeoutRef.current = setTimeout(() => setCopiedMessageId(null), 2000);
     } catch (err) {
-      console.error("Failed to copy text: ", err);
+      console.error('Failed to copy text: ', err);
     }
   };
 
@@ -695,7 +712,7 @@ function Chat({ patientId, currentUser }) {
                       <div className="assistant-message-tools">
                         <span>{msg.model || 'RhumatoAI'}</span>
                         {msg.tokens ? <span>{msg.tokens} tokens</span> : null}
-                        <button onClick={() => handleCopyMessage(msg.id, msg.content)}>
+                        <button type="button" onClick={() => handleCopyMessage(msg.id, msg.content)}>
                           <FiCopy /> {copiedMessageId === msg.id ? 'Copié' : 'Copier'}
                         </button>
                       </div>
