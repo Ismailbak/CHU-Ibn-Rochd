@@ -6,12 +6,24 @@
   flex-direction: column;
   gap: 8px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card-clickable {
   cursor: pointer;
 }
 
-.stat-card:hover {
+.stat-card-clickable:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card-clickable:focus-visible {
+  outline: 2px solid #3B82F6;
+  outline-offset: 2px;
+}
+
+.stat-card-clickable:active {
+  transform: translateY(0);
 }
 
 .stat-card-pink {

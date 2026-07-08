@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { FiUsers, FiCalendar, FiFileText, FiActivity, FiHeart, FiArrowRight } from 'react-icons/fi';
+import { FiUsers, FiCalendar, FiFileText, FiMessageSquare, FiHeart, FiArrowRight } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonChart, SkeletonListItem } from '../../components/common';
@@ -92,7 +92,6 @@ function DashboardPage() {
     totalPatients: 0,
     todayAppointments: 0,
     medicalActs: 0,
-    consultations: 0,
     diagnosisRecords: 0,
     commonDiagnoses: [],
   });
@@ -121,7 +120,6 @@ function DashboardPage() {
           totalPatients: dashboard?.total_patients || 0,
           todayAppointments: dashboard?.today_appointments || 0,
           medicalActs: dashboard?.medical_acts || 0,
-          consultations: dashboard?.consultations || 0,
           diagnosisRecords: dashboard?.diagnosis_records || 0,
           commonDiagnoses: (dashboard?.common_diagnoses || []).map((diag, i) => ({
             name: diag.name,
@@ -230,6 +228,7 @@ function DashboardPage() {
                 percentage="Total"
                 value={`${stats.totalPatients} patients`}
                 color="pink"
+                onClick={() => navigate('/patients')}
               />
               <StatCard
                 icon={<FiCalendar />}
@@ -237,6 +236,7 @@ function DashboardPage() {
                 percentage="Planifiés"
                 value={`${stats.todayAppointments} rdv`}
                 color="blue"
+                onClick={() => navigate('/appointments')}
               />
               <StatCard
                 icon={<FiFileText />}
@@ -244,13 +244,15 @@ function DashboardPage() {
                 percentage="Total"
                 value={`${stats.medicalActs} actes`}
                 color="green"
+                onClick={() => navigate('/medical-acts')}
               />
               <StatCard
-                icon={<FiActivity />}
-                label="Consultations"
-                percentage="Total"
-                value={`${stats.consultations} consultations`}
+                icon={<FiMessageSquare />}
+                label="Assistant"
+                percentage="Statut"
+                value="Ready"
                 color="yellow"
+                onClick={() => navigate('/assistant')}
               />
               <StatCard
                 icon={<FiHeart />}
@@ -258,6 +260,7 @@ function DashboardPage() {
                 percentage="Fréquents"
                 value={stats.commonDiagnoses.length ? `${stats.commonDiagnoses.length} types` : '-'}
                 color="purple"
+                onClick={() => navigate('/analytics')}
               />
             </>
           )}
