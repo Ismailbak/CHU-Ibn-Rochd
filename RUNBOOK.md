@@ -29,9 +29,28 @@ guide, and **what to do when things break**.
    │ 192.168.11.10  │ SQL │ 192.168.11.20 (enp6s18)      │ HTTP │ 192.168.11.30           │
    │ MySQL 8        │     │ 10.13.19.120  (enp6s19 2nd)  │11434 │ Ollama + RTX 3060       │
    │ rhumatoai      │     │ Nginx + FastAPI + React      │      │ model: gemma4:e4b       │
-   │ rhumatoai_sec  │     │ systemd: ia-medical          │      │ systemd: ollama         │
+   │ rhumatoai_sec  │     │ cron: sync every 10 min      │      │ systemd: ollama         │
    └───────────────┘      └────────────────────────────┘      └────────────────────────┘
 ```
+
+**Data flow (primary / secondary — live on test site):**
+
+```text
+Doctors / App (4020)  ──read/write──►  rhumatoai (PRIMARY, source of truth)
+                                              │
+                              sync job (4020, every 10 min)
+                              python -m scripts.sync_rag_database
+                                              │
+                                              ▼
+Assistant RAG (4020)  ──read only──►  rhumatoai_sec (SECONDARY, AI copy)
+                                              │
+                                              ▼
+                              Ollama (4030) generates answer text (no DB access)
+```
+
+- **Primary** (`rhumatoai`): patients, RDV, actes, users, chat, audit — app CRUD only.
+- **Secondary** (`rhumatoai_sec`): copy of clinical tables for RAG — assistant never reads primary when `RAG_DATABASE_URL` is set.
+- **Sync**: app VM reads primary with `rhumato_app`, writes secondary with `ia_sync`.
 
 **Two networks meet at the Proxmox host:**
 
@@ -66,8 +85,9 @@ VM **4020** also has a **second NIC** on `10.13.19.120` for direct access if rou
 | IP | `192.168.11.10/24` |
 | vCPU / RAM / Disk | 2 / 4 GB / 40 GB |
 | Service | MySQL 8 (`systemctl … mysql`) |
-| Databases | `rhumatoai` (primary), `rhumatoai_sec` (future AI sync) |
-| App DB user | `rhumato_app@192.168.11.20` / password `App123` |
+| Databases | `rhumatoai` (primary), `rhumatoai_sec` (secondary — AI/RAG copy) |
+| App DB user | `rhumato_app@192.168.11.20` / password `App123` — read/write **primary only** |
+| Sync DB user | `ia_sync@192.168.11.20` / password `Sync123` — read/write **secondary only** |
 | Bind address | `0.0.0.0` (in `/etc/mysql/mysql.conf.d/mysqld.cnf`) |
 | Port | 3306 |
 
@@ -81,6 +101,7 @@ VM **4020** also has a **second NIC** on `10.13.19.120` for direct access if rou
 | App code | `/opt/ia-medical` (`backend/`, `frontend/web/build`) |
 | Python venv | `/opt/ia-medical/backend/.venv` |
 | Env file | `/etc/ia-medical/env` (mode 600) |
+| Sync log | `/opt/ia-medical/logs/rhumato-sync.log` |
 | Backend service | `ia-medical` (systemd) → uvicorn on `127.0.0.1:8000` |
 | Web server | Nginx → `/etc/nginx/sites-available/ia-medical` |
 | Serves | React build on port 80, proxies `/api/`, `/uploads/`, `/health` |
@@ -114,7 +135,7 @@ VM **4020** also has a **second NIC** on `10.13.19.120` for direct access if rou
 ```bash
 APP_ENV=production
 DATABASE_URL=mysql+pymysql://rhumato_app:App123@192.168.11.10:3306/rhumatoai
-RAG_DATABASE_URL=mysql+pymysql://ia_sync:App123@192.168.11.10:3306/rhumatoai_sec
+RAG_DATABASE_URL=mysql+pymysql://ia_sync:Sync123@192.168.11.10:3306/rhumatoai_sec
 SECRET_KEY=<long-random-secret>
 CORS_ORIGINS="http://192.168.11.20,http://10.13.19.120,http://10.13.19.111:8080,http://rheuma.local"
 OLLAMA_HOST=http://192.168.11.30:11434
@@ -233,6 +254,31 @@ ssh -J root@10.13.19.111 ismailbak@192.168.11.10
 ssh -J root@10.13.19.111 ismailbak@192.168.11.30
 ```
 
+**Optional `~/.ssh/config` on your PC** (repeat access):
+
+```sshconfig
+Host proxmox
+  HostName 10.13.19.111
+  User root
+
+Host rhumato-db
+  HostName 192.168.11.10
+  User ismailbak
+  ProxyJump proxmox
+
+Host rhumato-app
+  HostName 192.168.11.20
+  User ismailbak
+  ProxyJump proxmox
+
+Host rhumato-ai
+  HostName 192.168.11.30
+  User ismailbak
+  ProxyJump proxmox
+```
+
+Then: `ssh rhumato-app`, `ssh rhumato-db`, etc.
+
 ### Proxmox console (always works, even if network/SSH is down)
 
 Proxmox web UI → select VM → **Console**. Log in as `ismailbak`.
@@ -246,15 +292,18 @@ Order: **DB → App → AI**.
 1. **Create 3 VMs** in Proxmox (Ubuntu 24.04, static IPs, `ismailbak` user, OpenSSH).
 2. **4010 DB:**
    - Install MySQL 8, set `bind-address = 0.0.0.0`, open port 3306.
-   - Create `rhumatoai` + `rhumatoai_sec`; create user `rhumato_app@192.168.11.20`.
-   - Import existing dump (`mysqldump -r` from PC → transfer → `mysql rhumatoai < dump.sql`).
+   - Create `rhumatoai` + `rhumatoai_sec`.
+   - Create `rhumato_app@192.168.11.20` (ALL on `rhumatoai.*`).
+   - Create `ia_sync@192.168.11.20` (ALL on `rhumatoai_sec.*` only).
+   - Import existing dump into **primary only** (`mysql rhumatoai < dump.sql`).
 3. **4020 App:**
    - Install `python3-venv`, `nginx`, Node.js, `mysql-client`.
    - Copy repo to `/opt/ia-medical`; `python -m venv .venv`; `pip install -r requirements.txt`.
-   - Write `/etc/ia-medical/env`; run `alembic upgrade head`.
+   - Write `/etc/ia-medical/env` (include `RAG_DATABASE_URL`); run `alembic upgrade head`.
    - `npm ci && REACT_APP_API_URL=/api npm run build` in `frontend/web`.
    - Create `ia-medical.service`; configure Nginx; open port 80.
    - Add **2nd NIC** (`10.13.19.120`) via netplan for office access.
+   - **Enable secondary DB sync:** `python -m scripts.sync_rag_database --init-schema`, then cron (§6).
 4. **4030 AI:**
    - Install Ubuntu, add **GPU passthrough** (RTX 3060) after install.
    - Install Ollama; set `OLLAMA_HOST=0.0.0.0:11434` override; pull `gemma4:e4b`.
@@ -357,28 +406,87 @@ python scripts/setup_admin.py      # (re)create admin — needs ADMIN_PASSWORD
 
 ### Secondary DB sync (primary → rhumatoai_sec for RAG)
 
-The app **writes only** to `rhumatoai`. The assistant **reads** from `rhumatoai_sec` after sync.
+The app **writes only** to `rhumatoai`. The assistant **reads** from `rhumatoai_sec` when `RAG_DATABASE_URL` is set.
 
-**First-time setup** (4020, env loaded):
+#### Create sync user (4010, once)
 
 ```bash
-cd /opt/ia-medical/backend && source .venv/bin/activate
-python -m scripts.sync_rag_database --init-schema
+sudo mysql
 ```
 
-**Regular sync** (run manually or via cron every 5–15 min):
+```sql
+CREATE USER IF NOT EXISTS 'ia_sync'@'192.168.11.20' IDENTIFIED BY 'Sync123';
+GRANT ALL ON rhumatoai_sec.* TO 'ia_sync'@'192.168.11.20';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+#### First-time sync (4020, env loaded)
 
 ```bash
+mkdir -p /opt/ia-medical/logs
+set -a && source /etc/ia-medical/env && set +a
+cd /opt/ia-medical/backend && source .venv/bin/activate
+python -m scripts.sync_rag_database --init-schema
 python -m scripts.sync_rag_database
 ```
 
-**Cron example** (as `ismailbak` on 4020):
+Run from **`/opt/ia-medical/backend`** using `-m` (not `python scripts/...` alone — needs `app` on path).
+
+#### Verify counts match (4010)
 
 ```bash
-*/10 * * * * set -a && source /etc/ia-medical/env && set +a && cd /opt/ia-medical/backend && .venv/bin/python -m scripts.sync_rag_database >> /var/log/rhumato-sync.log 2>&1
+sudo mysql -e "
+SELECT 'PRIMARY patients' AS label, COUNT(*) AS n FROM rhumatoai.patients
+UNION ALL SELECT 'SECONDARY patients', COUNT(*) FROM rhumatoai_sec.patients
+UNION ALL SELECT 'PRIMARY acts', COUNT(*) FROM rhumatoai.medical_acts
+UNION ALL SELECT 'SECONDARY acts', COUNT(*) FROM rhumatoai_sec.medical_acts;
+"
 ```
 
-**MySQL user on 4010** — `ia_sync` needs write access to `rhumatoai_sec` only; the app reads primary with `rhumato_app` and writes secondary with `ia_sync` during sync.
+Compare one patient in each DB separately (avoid UNION collation errors):
+
+```bash
+sudo mysql rhumatoai -e "SELECT ipp, first_name, last_name FROM patients WHERE ipp='2026-0042';"
+sudo mysql rhumatoai_sec -e "SELECT ipp, first_name, last_name FROM patients WHERE ipp='2026-0042';"
+```
+
+#### Cron (4020 — auto sync every 10 min)
+
+```bash
+crontab -e
+```
+
+Choose editor **1** (nano). Add **one line only**:
+
+```
+*/10 * * * * set -a && source /etc/ia-medical/env && set +a && cd /opt/ia-medical/backend && .venv/bin/python -m scripts.sync_rag_database >> /opt/ia-medical/logs/rhumato-sync.log 2>&1
+```
+
+Verify: `crontab -l | grep sync`
+
+**Do not** log to `/var/log/` — `ismailbak` lacks write permission. Use `/opt/ia-medical/logs/`.
+
+Watch log:
+
+```bash
+tail -f /opt/ia-medical/logs/rhumato-sync.log
+```
+
+#### Tables synced
+
+`users`, `patients`, `patient_allergies`, `appointments`, `medical_acts`, `act_diagnoses`, `act_treatments`, `act_results`
+
+Not synced: chat, audit, forms (app-only on primary).
+
+#### Deploy code updates (4020)
+
+```bash
+cd /opt/ia-medical && git pull
+cd frontend/web && npm run build          # if frontend changed
+sudo systemctl restart ia-medical
+python -m scripts.sync_rag_database       # optional immediate sync
+```
 
 ---
 
@@ -391,13 +499,22 @@ python -m scripts.sync_rag_database
    - **Patients** — create / view / edit patient files.
    - **Appointments** — schedule and view.
    - **Medical Acts / Forms** — clinical forms and documents.
-   - **Assistant** (`/assistant`) — AI chat. First answer may take **10–30 s** (model loads on GPU).
+   - **Assistant** (`/assistant`) — AI chat grounded on **secondary DB** via RAG. First answer may take **10–30 s** (model loads on GPU).
 4. Log out when finished. The app auto-logs out after **30 minutes** of inactivity.
 
 **Notes for users:**
 - If a page is blank, refresh with **Ctrl+Shift+R**.
 - If AI chat says unavailable, tell the admin (VM 4030 / Ollama may be down).
 - Do not share accounts; each doctor/nurse has their own login.
+
+### Showcase / demo tips (assistant)
+
+- Warm up the assistant before the demo (first query loads the model on GPU).
+- Use **IPP** for unambiguous patient lookup: `IPP 2026-0042` (Fatima El Amrani).
+- Avoid bare `Fatima El Amrani` — two patients share that name in the DB.
+- Prove RAG: expand **Sources et preuves** — citations show `patient #…`, `medical_act #…`.
+- Negative test (new chat): fake IPP `9999-FAKE-XYZ` should return *patient not found*, not an invented dossier.
+- **Confiance faible** means few retrieved facts, not “model memory” — check sources panel.
 
 ---
 
@@ -531,8 +648,9 @@ Start VMs in this order and verify each:
 1. **4010** (DB) → `sudo systemctl status mysql`
 2. **4030** (AI) → `curl -s http://127.0.0.1:11434/api/tags`
 3. **4020** (App) → `curl -s http://127.0.0.1:8000/health`
-4. **Proxmox nginx** proxy → `curl -s http://127.0.0.1:8080/health`
-5. Browser → `http://10.13.19.111:8080` → log in → test chat.
+4. **4020** sync → `tail -3 /opt/ia-medical/logs/rhumato-sync.log` (or run sync manually)
+5. **Proxmox nginx** proxy → `curl -s http://127.0.0.1:8080/health`
+6. Browser → `http://10.13.19.111:8080` → log in → test chat.
 
 ---
 
@@ -585,6 +703,13 @@ mysql -h 192.168.11.10 -u rhumato_app -pApp123 rhumatoai < /tmp/rhumatoai-YYYY-M
 | `/` full after `pip install` | Ubuntu LVM uses ~half the disk | `lvextend` + `resize2fs` |
 | MySQL import garbled | PowerShell `>` made UTF-16 file | `mysqldump -r` / `iconv` |
 | netplan `unknown key` / indentation | tabs or wrong indent in YAML | spaces only; interfaces aligned |
+| Dashboard “Activité Récente” shows future dates | query sorted all RDV including future | fixed: past-only filter in analytics |
+| RDV “Confirmés” counter not updating | UI updated list but not stats state | fixed: recalc stats on confirm/cancel |
+| Assistant **Copier** button dead | `navigator.clipboard` blocked on HTTP | fixed: `execCommand` fallback |
+| Cron sync log permission denied | `/var/log/` not writable by `ismailbak` | use `/opt/ia-medical/logs/rhumato-sync.log` |
+| Crontab line broken (`[201~` duplicated) | bracketed paste in nano | re-edit crontab; one clean line only |
+| MySQL UNION collation error | `rhumatoai` vs `rhumatoai_sec` charset mismatch | query each DB separately |
+| Assistant empty / stale after new data | secondary not synced yet | wait for cron or run sync manually |
 
 ---
 
@@ -595,13 +720,14 @@ When deploying at the next clinic:
 1. Same 3 VMs, Ubuntu 24.04, user `ismailbak`, static IPs (adjust subnet).
 2. Import latest `rhumatoai` dump into the new DB VM.
 3. `pip install -r requirements.txt` (now includes `bcrypt==4.0.1`).
-4. Set `/etc/ia-medical/env` with the new IPs and a **new** `SECRET_KEY`.
-5. Ollama: `OLLAMA_HOST=0.0.0.0:11434` + `ollama pull gemma4:e4b`.
-6. GPU passthrough if a card is available; otherwise CPU (slower).
-7. Decide browser access with IT: routing to the app subnet, a reverse proxy,
+4. Set `/etc/ia-medical/env` with the new IPs, **`RAG_DATABASE_URL`**, and a **new** `SECRET_KEY`.
+5. Create `ia_sync` user on DB VM; run `--init-schema` sync on app VM; set cron.
+6. Ollama: `OLLAMA_HOST=0.0.0.0:11434` + `ollama pull gemma4:e4b`.
+7. GPU passthrough if a card is available; otherwise CPU (slower).
+8. Decide browser access with IT: routing to the app subnet, a reverse proxy,
    DNS name, or a 2nd NIC (as done here).
-8. Snapshot every VM once login + chat work.
+9. Snapshot every VM once login + chat work.
 
 ---
 
-*Last updated: deployment of the office test site (3-VM stack live, `gemma4:e4b`).*
+*Last updated: Jul 2026 — primary/secondary DB sync live, RAG on `rhumatoai_sec`, cron every 10 min.*
