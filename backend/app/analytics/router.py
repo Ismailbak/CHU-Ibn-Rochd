@@ -90,6 +90,49 @@ def get_recent_activity(
     activities.sort(key=lambda x: x["time"], reverse=True)
     return {"activities": activities[:10]}  # Return the 10 most recent activities
 
+
+@router.get("/upcoming-appointments")
+def get_upcoming_appointments(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_orm),
+    limit: int = Query(5, ge=1, le=20),
+):
+    """Return the next scheduled appointments (future only, excluding cancelled)."""
+    now = datetime.now()
+    rows = (
+        db.query(AppointmentModel)
+        .filter(
+            AppointmentModel.datetime_scheduled >= now,
+            AppointmentModel.status != "cancelled",
+        )
+        .order_by(AppointmentModel.datetime_scheduled.asc())
+        .limit(limit)
+        .all()
+    )
+    patient_ids = {a.patient_id for a in rows if a.patient_id}
+    patient_names = get_patient_names(db, patient_ids) if patient_ids else {}
+
+    status_labels = {
+        "confirmed": "Confirmé",
+        "scheduled": "En attente",
+        "completed": "Terminé",
+    }
+
+    appointments = []
+    for apt in rows:
+        patient_name = patient_names.get(apt.patient_id, "Patient")
+        appointments.append({
+            "id": apt.id,
+            "patient_id": apt.patient_id,
+            "patient_name": patient_name,
+            "datetime_scheduled": _to_iso(apt.datetime_scheduled),
+            "reason": apt.reason,
+            "status": apt.status,
+            "status_label": status_labels.get(apt.status, apt.status or "En attente"),
+        })
+    return {"appointments": appointments}
+
+
 def _to_iso(dt):
     if dt is None:
         return None

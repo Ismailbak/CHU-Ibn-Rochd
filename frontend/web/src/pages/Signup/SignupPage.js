@@ -292,7 +292,7 @@ function SignupPage() {
                       id="email"
                       name="email"
                       type="email"
-                      placeholder="docteur@churochd.ma"
+                      placeholder="votre.email@etablissement.ma"
                       value={formData.email}
                       onChange={handleChange}
                       required

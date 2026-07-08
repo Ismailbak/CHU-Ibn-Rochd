@@ -5,8 +5,8 @@ function PrivacyContent() {
     <>
       <p className="legal-notice">
         La présente politique informe les utilisateurs professionnels de RhumatoAI sur la
-        manière dont le Centre Hospitalo-Universitaire Ibn Rochd (CHU) — Service de
-        Rhumatologie traite les données à caractère personnel, et notamment les{' '}
+        manière dont l&apos;établissement de santé hôte — Service de Rhumatologie traite les
+        données à caractère personnel, et notamment les{' '}
         <strong>données de santé</strong>, conformément à la{' '}
         <strong>Loi n° 09-08</strong> relative à la protection des personnes physiques à
         l&apos;égard du traitement des données à caractère personnel, promulguée par le
@@ -19,26 +19,13 @@ function PrivacyContent() {
       <section>
         <h2>1. Responsable du traitement</h2>
         <p>
-          <strong>Responsable du traitement :</strong> Centre Hospitalo-Universitaire Ibn
-          Rochd — Service de Rhumatologie, Casablanca, Royaume du Maroc.
+          <strong>Responsable du traitement :</strong> l&apos;établissement de santé hôte —
+          Service de Rhumatologie, Royaume du Maroc.
         </p>
         <p>
-          <strong>Contacts :</strong>
-        </p>
-        <ul>
-          <li>
-            Samy Housbane —{' '}
-            <a href="mailto:s.housbane@gmail.com">s.housbane@gmail.com</a>
-          </li>
-          <li>
-            Ismail Bakraoui —{' '}
-            <a href="mailto:ismail.bakraoui0@gmail.com">ismail.bakraoui0@gmail.com</a>
-          </li>
-        </ul>
-        <p>
-          <strong>Référents protection des données :</strong> les contacts ci-dessus
-          assurent le lien avec les utilisateurs pour toute question relative à la
-          présente politique et aux droits des personnes concernées.
+          <strong>Contact :</strong> pour toute question relative à la protection des données
+          ou à l&apos;exercice de vos droits, adressez-vous à{' '}
+          <strong>l&apos;administration de l&apos;établissement</strong>.
         </p>
         <p>
           Le traitement est effectué dans le cadre des missions de soins, de gestion
@@ -177,21 +164,10 @@ function PrivacyContent() {
           <li><strong>Droit à l&apos;information</strong> — être informé des finalités et modalités du traitement (objet de la présente politique).</li>
         </ul>
         <p>
-          Les demandes s&apos;exercent auprès des référents suivants :
-        </p>
-        <ul>
-          <li>
-            Samy Housbane —{' '}
-            <a href="mailto:s.housbane@gmail.com">s.housbane@gmail.com</a>
-          </li>
-          <li>
-            Ismail Bakraoui —{' '}
-            <a href="mailto:ismail.bakraoui0@gmail.com">ismail.bakraoui0@gmail.com</a>
-          </li>
-        </ul>
-        <p>
-          Une réponse sera apportée dans un délai raisonnable, et au plus tard dans les
-          délais prévus par la réglementation.
+          Les demandes s&apos;exercent auprès de{' '}
+          <strong>l&apos;administration de l&apos;établissement</strong>. Une réponse sera
+          apportée dans un délai raisonnable, et au plus tard dans les délais prévus par la
+          réglementation.
         </p>
         <p>
           En cas de difficulté non résolue, la personne concernée peut introduire une
@@ -232,22 +208,13 @@ function PrivacyContent() {
       <section>
         <h2>12. Contact</h2>
         <p>
-          <strong>Protection des données et questions générales :</strong>
+          Pour toute question relative à la protection des données ou à l&apos;utilisation de
+          RhumatoAI, contactez <strong>l&apos;administration de l&apos;établissement</strong>.
         </p>
-        <ul>
-          <li>
-            Samy Housbane —{' '}
-            <a href="mailto:s.housbane@gmail.com">s.housbane@gmail.com</a>
-          </li>
-          <li>
-            Ismail Bakraoui —{' '}
-            <a href="mailto:ismail.bakraoui0@gmail.com">ismail.bakraoui0@gmail.com</a>
-          </li>
-        </ul>
       </section>
 
       <p className="legal-footer">
-        Document établi pour RhumatoAI — usage professionnel CHU Ibn Rochd. Il complète
+        Document établi pour RhumatoAI — usage professionnel interne. Il complète
         les politiques internes de l&apos;établissement et ne dispense pas d&apos;une
         déclaration ou autorisation CNDP le cas échéant. Validation juridique recommandée
         avant publication officielle.

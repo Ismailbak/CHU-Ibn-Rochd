@@ -244,6 +244,8 @@ export const getSessionMessages = (sessionId, limit = 100, offset = 0) =>
 export const getAnalyticsSummary = (dateRange = '6months') => api.get('/analytics/summary', { params: { date_range: dateRange } });
 export const getDashboardSummary = () => api.get('/analytics/dashboard-summary');
 export const getRecentActivity = () => api.get('/analytics/recent-activity');
+export const getUpcomingAppointments = (limit = 5) =>
+  api.get('/analytics/upcoming-appointments', { params: { limit } });
 
 // User Profile & Security
 export const changePassword = (currentPassword, newPassword) => api.post('/auth/change-password', { current_password: currentPassword, new_password: newPassword });

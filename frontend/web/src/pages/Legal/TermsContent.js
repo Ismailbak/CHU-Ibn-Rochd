@@ -12,9 +12,9 @@ function TermsContent({ privacyLink = true }) {
     <>
       <p className="legal-notice">
         Les présentes conditions régissent l&apos;accès et l&apos;utilisation de la plateforme
-        <strong> RhumatoAI</strong>, déployée au sein du Centre Hospitalo-Universitaire Ibn Rochd
-        (CHU), Service de Rhumatologie. Elles s&apos;adressent exclusivement au personnel
-        autorisé et aux utilisateurs professionnels habilités.
+        <strong> RhumatoAI</strong>, déployée au sein de l&apos;établissement de santé hôte —
+        Service de Rhumatologie. Elles s&apos;adressent exclusivement au personnel autorisé et
+        aux utilisateurs professionnels habilités.
       </p>
 
       <section>
@@ -28,33 +28,24 @@ function TermsContent({ privacyLink = true }) {
         </p>
         <p>
           Si vous n&apos;acceptez pas ces conditions, vous devez cesser toute utilisation de la
-          plateforme et en informer l&apos;administrateur désigné par l&apos;établissement.
+          plateforme et en informer l&apos;administration de l&apos;établissement.
         </p>
       </section>
 
       <section>
         <h2>2. Éditeur et responsable du service</h2>
         <p>
-          <strong>Éditeur / Exploitant :</strong> Centre Hospitalo-Universitaire Ibn Rochd —
-          Service de Rhumatologie, Casablanca, Royaume du Maroc.
+          <strong>Éditeur / Exploitant :</strong> l&apos;établissement de santé hôte —
+          Service de Rhumatologie, Royaume du Maroc.
         </p>
         <p>
-          <strong>Contacts :</strong>
+          <strong>Contact :</strong> pour toute question relative aux présentes conditions,
+          adressez-vous à <strong>l&apos;administration de l&apos;établissement</strong>.
         </p>
-        <ul>
-          <li>
-            Samy Housbane —{' '}
-            <a href="mailto:s.housbane@gmail.com">s.housbane@gmail.com</a>
-          </li>
-          <li>
-            Ismail Bakraoui —{' '}
-            <a href="mailto:ismail.bakraoui0@gmail.com">ismail.bakraoui0@gmail.com</a>
-          </li>
-        </ul>
         <p>
           <strong>Administrateur technique :</strong> équipe informatique désignée par
           l&apos;établissement hôte. Les modalités d&apos;habilitation et de support interne sont
-          définies par la politique SI de l&apos;hôpital.
+          définies par la politique SI de l&apos;établissement.
         </p>
       </section>
 
@@ -78,7 +69,7 @@ function TermsContent({ privacyLink = true }) {
       <section>
         <h2>4. Conditions d&apos;accès et comptes utilisateurs</h2>
         <ul>
-          <li>L&apos;accès est réservé aux professionnels de santé et au personnel autorisé par l&apos;administrateur (médecins, personnels paramédicaux, administrateurs désignés).</li>
+          <li>L&apos;accès est réservé aux professionnels de santé et au personnel autorisé par l&apos;administration (médecins, personnels paramédicaux, administrateurs désignés).</li>
           <li>Chaque utilisateur dispose d&apos;identifiants personnels et confidentiels. Le partage de compte est strictement interdit.</li>
           <li>L&apos;utilisateur s&apos;engage à fournir des informations exactes lors de l&apos;inscription et à signaler toute compromission de ses identifiants sans délai.</li>
           <li>L&apos;établissement se réserve le droit de suspendre ou supprimer un compte en cas de violation des CGU, de la déontologie médicale ou des politiques internes.</li>
@@ -90,7 +81,7 @@ function TermsContent({ privacyLink = true }) {
         </p>
         <ul>
           <li>soumettre une demande via la page <strong>« Mot de passe oublié »</strong> accessible depuis l&apos;écran de connexion ;</li>
-          <li>contacter un administrateur du service ou un référent technique (Samy Housbane, Ismail Bakraoui) ;</li>
+          <li>contacter l&apos;administration de l&apos;établissement ;</li>
           <li>obtenir une réinitialisation manuelle par un administrateur habilité (interface d&apos;administration).</li>
         </ul>
         <p>
@@ -108,7 +99,7 @@ function TermsContent({ privacyLink = true }) {
           <li>ne consulter que les dossiers patients pour lesquels il existe une justification professionnelle légitime ;</li>
           <li>ne pas extraire, copier ou diffuser des données patients en dehors des circuits autorisés par l&apos;établissement ;</li>
           <li>ne pas tenter de contourner les mesures de sécurité, d&apos;accéder à des espaces non autorisés ou d&apos;utiliser le système à des fins frauduleuses ;</li>
-          <li>signaler sans délai toute faille de sécurité ou incident de confidentialité à l&apos;administrateur et, le cas échéant, au DPO.</li>
+          <li>signaler sans délai toute faille de sécurité ou incident de confidentialité à l&apos;administration et, le cas échéant, au référent protection des données.</li>
         </ul>
       </section>
 
@@ -171,7 +162,7 @@ function TermsContent({ privacyLink = true }) {
         <h2>10. Suspension et résiliation</h2>
         <p>
           L&apos;accès peut être suspendu ou résilié à tout moment en cas de manquement aux
-          présentes CGU, sur décision de l&apos;administrateur ou de la direction de
+          présentes CGU, sur décision de l&apos;administration ou de la direction de
           l&apos;établissement. La résiliation n&apos;affecte pas les obligations légales
           subsistantes (conservation des dossiers médicaux, secret professionnel, etc.).
         </p>
@@ -200,22 +191,13 @@ function TermsContent({ privacyLink = true }) {
       <section>
         <h2>13. Contact</h2>
         <p>
-          Pour toute question relative aux présentes conditions, contactez :
+          Pour toute question relative aux présentes conditions, contactez{' '}
+          <strong>l&apos;administration de l&apos;établissement</strong>.
         </p>
-        <ul>
-          <li>
-            Samy Housbane —{' '}
-            <a href="mailto:s.housbane@gmail.com">s.housbane@gmail.com</a>
-          </li>
-          <li>
-            Ismail Bakraoui —{' '}
-            <a href="mailto:ismail.bakraoui0@gmail.com">ismail.bakraoui0@gmail.com</a>
-          </li>
-        </ul>
       </section>
 
       <p className="legal-footer">
-        Document établi pour RhumatoAI — CHU Ibn Rochd, Service de Rhumatologie.
+        Document établi pour RhumatoAI — Service de Rhumatologie.
         Validation par le service juridique de l&apos;établissement recommandée avant
         publication officielle.
       </p>

@@ -44,9 +44,8 @@ function ForgotPasswordPage() {
           </div>
           <h1>Récupération de compte</h1>
           <p>
-            RhumatoAI est hébergé en local au CHU Ibn Rochd. La réinitialisation du mot de
-            passe est assurée par un administrateur ou un référent technique, après vérification
-            de votre identité.
+            RhumatoAI est hébergé en local au sein de l&apos;établissement. La réinitialisation du mot de
+            passe est assurée par l&apos;administration, après vérification de votre identité.
           </p>
           <div className="brand-features">
             <div className="feature-item">
@@ -114,16 +113,7 @@ function ForgotPasswordPage() {
               </div>
               <div className="forgot-contacts">
                 <h3>Besoin d&apos;aide urgente ?</h3>
-                <ul>
-                  <li>
-                    Samy Housbane —{' '}
-                    <a href="mailto:s.housbane@gmail.com">s.housbane@gmail.com</a>
-                  </li>
-                  <li>
-                    Ismail Bakraoui —{' '}
-                    <a href="mailto:ismail.bakraoui0@gmail.com">ismail.bakraoui0@gmail.com</a>
-                  </li>
-                </ul>
+                <p>Contactez l&apos;administration de l&apos;établissement.</p>
               </div>
             </div>
           ) : (
@@ -137,7 +127,7 @@ function ForgotPasswordPage() {
                   <input
                     id="forgot-email"
                     type="email"
-                    placeholder="docteur@churochd.ma"
+                    placeholder="votre.email@etablissement.ma"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -161,18 +151,8 @@ function ForgotPasswordPage() {
               <p>
                 <strong>Remarque :</strong> aucun lien de réinitialisation n&apos;est envoyé
                 automatiquement par e-mail (infrastructure locale). Vous pouvez aussi contacter
-                directement un référent :
+                l&apos;administration de l&apos;établissement.
               </p>
-              <ul>
-                <li>
-                  Samy Housbane —{' '}
-                  <a href="mailto:s.housbane@gmail.com">s.housbane@gmail.com</a>
-                </li>
-                <li>
-                  Ismail Bakraoui —{' '}
-                  <a href="mailto:ismail.bakraoui0@gmail.com">ismail.bakraoui0@gmail.com</a>
-                </li>
-              </ul>
             </div>
           )}
         </div>

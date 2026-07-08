@@ -150,7 +150,11 @@ def request_password_reset(
 
 
 @router.post("/signup")
-def signup(data: SignupRequest, db: Session = Depends(get_db)):
+def signup(
+    data: SignupRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
     username = data.username or data.email
     if get_user_by_username(db, username):
         raise HTTPException(status_code=400, detail="Username already registered")

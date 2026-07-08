@@ -55,6 +55,14 @@ def test_analytics_summary():
     assert "common_diagnoses" in data
 
 
+def test_analytics_upcoming_appointments():
+    response = client.get("/api/analytics/upcoming-appointments")
+    assert response.status_code == 200
+    data = response.json()
+    assert "appointments" in data
+    assert isinstance(data["appointments"], list)
+
+
 def test_analytics_recent_activity_excludes_future():
     response = client.get("/api/analytics/recent-activity")
     assert response.status_code == 200

@@ -57,7 +57,7 @@ function LoginPage() {
             <FiActivity />
             <span>RhumatoAI</span>
           </div>
-          <h1>Assistant IA pour la Rhumatologie</h1>
+          <h1>Smart Electronic Health Records</h1>
           <p>
             Optimisez votre pratique médicale avec notre assistant intelligent. 
             Gestion des patients, aide au diagnostic et suivi personnalisé.
@@ -66,7 +66,7 @@ function LoginPage() {
             <div className="feature-item">
               <div className="feature-icon">🏥</div>
               <div>
-                <h4>CHU Ibn Rochd</h4>
+                <h4>Établissement de santé</h4>
                 <p>Service de Rhumatologie</p>
               </div>
             </div>
@@ -116,7 +116,7 @@ function LoginPage() {
                 <input
                   id="email"
                   type="email"
-                  placeholder="docteur@churochd.ma"
+                  placeholder="votre.email@etablissement.ma"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -176,13 +176,6 @@ function LoginPage() {
               )}
             </button>
           </form>
-
-          <div className="auth-footer">
-            <p>
-              Pas encore de compte ?{' '}
-              <Link to="/signup">Créer un compte</Link>
-            </p>
-          </div>
         </div>
       </div>
     </div>

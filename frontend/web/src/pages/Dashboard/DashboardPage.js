@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { FiUsers, FiCalendar, FiFileText, FiActivity, FiHeart, FiArrowRight } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonChart, SkeletonListItem } from '../../components/common';
-import { getDashboardSummary, getRecentActivity } from '../../api/api';
+import { getDashboardSummary, getRecentActivity, getUpcomingAppointments } from '../../api/api';
 import { getWelcomeDisplayName, isAdminWelcome } from '../../utils/userGreeting';
 import './DashboardPage.css';
 
@@ -43,7 +44,46 @@ function timeAgo(isoString) {
   return date.toLocaleDateString('fr-FR');
 }
 
+function formatUpcoming(isoString) {
+  if (!isoString) return 'Date inconnue';
+  const now = new Date();
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return 'Date inconnue';
+
+  const diffSec = Math.floor((date - now) / 1000);
+  if (diffSec < 0) {
+    return date.toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  const timeLabel = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const aptDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayDiff = Math.round((aptDay - today) / 86400000);
+
+  if (dayDiff === 0) {
+    if (diffSec < 3600) return `Dans ${Math.max(1, Math.floor(diffSec / 60))} min`;
+    return `Aujourd'hui ${timeLabel}`;
+  }
+  if (dayDiff === 1) return `Demain ${timeLabel}`;
+  if (diffSec < 86400 * 7) return `Dans ${dayDiff} j · ${timeLabel}`;
+
+  return date.toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 function DashboardPage() {
+  const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userName = getWelcomeDisplayName(user);
   const adminWelcome = isAdminWelcome(user);
@@ -57,6 +97,7 @@ function DashboardPage() {
     commonDiagnoses: [],
   });
   const [activity, setActivity] = useState([]);
+  const [upcomingAppointments, setUpcomingAppointments] = useState([]);
 
   const [trendData, setTrendData] = useState([]);
 
@@ -68,9 +109,10 @@ function DashboardPage() {
         // Keep the dashboard light: fetch aggregate data instead of full tables.
         const fetchDashboard = getDashboardSummary().then(r => r.data).catch(e => { console.error("Dashboard Summary Load Error:", e); return {}; });
         const fetchRecentActivity = getRecentActivity().then(r => r.data?.activities).catch(e => { console.error("Activity Load Error:", e); return []; });
+        const fetchUpcomingAppointments = getUpcomingAppointments(5).then(r => r.data?.appointments).catch(e => { console.error("Upcoming Appointments Load Error:", e); return []; });
 
-        const [dashboard, remoteActivity] = await Promise.all([
-          fetchDashboard, fetchRecentActivity
+        const [dashboard, remoteActivity, remoteUpcoming] = await Promise.all([
+          fetchDashboard, fetchRecentActivity, fetchUpcomingAppointments
         ]);
 
         if (cancelled) return;
@@ -93,6 +135,7 @@ function DashboardPage() {
           ...item,
           icon: item.icon || activityIcons[item.type] || '•',
         })));
+        setUpcomingAppointments(remoteUpcoming || []);
 
       } catch (err) {
         if (!cancelled) {
@@ -251,18 +294,63 @@ function DashboardPage() {
             </div>
           )}
 
-          {/* Assistant AI Promo */}
-          <div className="assistant-promo-card">
-            <div className="promo-content">
-              <h3>Assistant IA</h3>
-              <p>Obtenez des résumés de dossiers patients et des suggestions médicales en temps réel.</p>
-              <button className="promo-btn" onClick={() => window.location.href = '/assistant'}>
-                <span>Essayer maintenant</span>
-                <FiArrowRight />
-              </button>
+          {/* Upcoming Appointments */}
+          {isLoading ? (
+            <div className="upcoming-card">
+              <h3>Prochains rendez-vous</h3>
+              <div className="activity-list">
+                <SkeletonListItem />
+                <SkeletonListItem />
+                <SkeletonListItem />
+              </div>
             </div>
-            <div className="promo-illustration">🤖</div>
-          </div>
+          ) : (
+            <div className="upcoming-card">
+              <div className="upcoming-card-header">
+                <h3>Prochains rendez-vous</h3>
+                <button
+                  type="button"
+                  className="upcoming-view-all"
+                  onClick={() => navigate('/appointments')}
+                >
+                  <span>Voir tout</span>
+                  <FiArrowRight />
+                </button>
+              </div>
+              <div className="activity-list">
+                {upcomingAppointments.length === 0 && (
+                  <div className="activity-empty-state">Aucun rendez-vous à venir</div>
+                )}
+                {upcomingAppointments.map((apt) => (
+                  <div
+                    className="activity-item appointment upcoming-item"
+                    key={apt.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate('/appointments')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') navigate('/appointments');
+                    }}
+                  >
+                    <div className="activity-icon appointment">
+                      <FiCalendar />
+                    </div>
+                    <div className="activity-info">
+                      <p className="activity-title">{apt.patient_name || 'Patient'}</p>
+                      <p className="activity-subtitle">
+                        {apt.reason?.trim() || 'Rendez-vous'}
+                        {' · '}
+                        <span className={`upcoming-status upcoming-status-${apt.status || 'scheduled'}`}>
+                          {apt.status_label || 'En attente'}
+                        </span>
+                      </p>
+                    </div>
+                    <span className="activity-time">{formatUpcoming(apt.datetime_scheduled)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Diagnosis Chart */}
           <div className="diagnosis-card">

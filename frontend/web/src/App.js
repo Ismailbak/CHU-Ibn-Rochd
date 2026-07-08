@@ -4,7 +4,6 @@ import { ToastProvider } from './components/common';
 import { getCurrentUser } from './api/api';
 import LoginPage from './pages/Login';
 import ForgotPasswordPage from './pages/Login/ForgotPasswordPage';
-import SignupPage from './pages/Signup';
 import DashboardPage from './pages/Dashboard';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminUsers from './pages/Admin/AdminUsers';
@@ -25,7 +24,7 @@ import ProfilePage from './pages/Profile';
 import { TermsPage, PrivacyPage } from './pages/Legal';
 
 const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
-const PUBLIC_PATHS = ['/', '/signup', '/forgot-password', '/terms', '/privacy'];
+const PUBLIC_PATHS = ['/', '/forgot-password', '/terms', '/privacy'];
 
 function clearAuth() {
   localStorage.removeItem('token');
@@ -126,7 +125,7 @@ function App() {
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/signup" element={<Navigate to="/" replace />} />
         <Route path="/dashboard" element={<AuthRoute><DashboardPage /></AuthRoute>} />
         <Route path="/admin" element={<AuthRoute adminOnly><AdminDashboard /></AuthRoute>} />
         <Route path="/admin/users" element={<AuthRoute adminOnly><AdminUsers /></AuthRoute>} />
