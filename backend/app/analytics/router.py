@@ -416,12 +416,22 @@ def export_audit_logs_csv(
 
 # ─── System Health ─────────────────────────────────────────────────────────────
 
+def _probe_table(db: Session, model) -> bool:
+    """Return True if a lightweight query against the table succeeds."""
+    try:
+        db.query(model.id).limit(1).all()
+        return True
+    except Exception:
+        db.rollback()
+        return False
+
+
 @router.get("/system-health")
 def get_system_health(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    # DB check
+    """Operational status checks (not stats) for admin settings."""
     db_ok = False
     try:
         db.execute(text("SELECT 1"))
@@ -429,40 +439,17 @@ def get_system_health(
     except Exception:
         pass
 
-    total_users = 0
-    total_patients = 0
-    total_appointments = 0
-    total_medical_acts = 0
-    total_audit_logs = 0
-    counts_ok = False
-    if db_ok:
-        try:
-            total_users = db.query(func.count(User.id)).scalar() or 0
-            total_patients = db.query(func.count(PatientModel.id)).scalar() or 0
-            total_appointments = db.query(func.count(AppointmentModel.id)).scalar() or 0
-            total_medical_acts = db.query(func.count(MedicalActModel.id)).scalar() or 0
-            total_audit_logs = db.query(func.count(AuditLog.id)).scalar() or 0
-            counts_ok = True
-        except Exception:
-            db.rollback()
+    users_ok = _probe_table(db, User) if db_ok else False
+    patients_ok = _probe_table(db, PatientModel) if db_ok else False
+    appointments_ok = _probe_table(db, AppointmentModel) if db_ok else False
 
     return {
         "database": "connected" if db_ok else "disconnected",
         "api": "running",
-        "status": "ok" if db_ok and counts_ok else "degraded",
-        "counts": {
-            "users": total_users if counts_ok else None,
-            "patients": total_patients if counts_ok else None,
-            "appointments": total_appointments if counts_ok else None,
-            "medical_acts": total_medical_acts if counts_ok else None,
-            "audit_logs": total_audit_logs if counts_ok else None,
-        },
-        # Legacy flat fields (kept for compatibility)
-        "total_users": total_users,
-        "total_patients": total_patients,
-        "total_appointments": total_appointments,
-        "total_medical_acts": total_medical_acts,
-        "total_audit_logs": total_audit_logs,
+        "users": "operational" if users_ok else "error",
+        "patients": "operational" if patients_ok else "error",
+        "appointments": "operational" if appointments_ok else "error",
+        "status": "ok" if db_ok and users_ok and patients_ok and appointments_ok else "degraded",
     }
 
 

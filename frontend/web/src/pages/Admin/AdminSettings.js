@@ -84,13 +84,7 @@ function AdminSettings() {
     } finally { setBroadcastLoading(false); }
   };
 
-  const healthCounts = health?.counts || {
-    users: health?.total_users,
-    patients: health?.total_patients,
-    appointments: health?.total_appointments,
-  };
-  const countStatus = (value) => (value === null || value === undefined ? 'settings-health-card--err' : 'settings-health-card--ok');
-  const formatCount = (value) => (value === null || value === undefined ? '-' : Number(value).toLocaleString('fr-FR'));
+  const isOk = (value) => value === 'operational' || value === 'connected' || value === 'running' || value === 'ok';
 
   if (isLoading || !settings) {
     return (
@@ -236,39 +230,45 @@ function AdminSettings() {
               <div className="settings-card-body">
                 {health ? (
                   <div className="settings-health-cards">
-                    <div className={`settings-health-card ${health.database === 'connected' ? 'settings-health-card--ok' : 'settings-health-card--err'}`}>
+                    <div className={`settings-health-card ${isOk(health.database) ? 'settings-health-card--ok' : 'settings-health-card--err'}`}>
                       <FiDatabase size={22} />
                       <div className="settings-health-card-info">
                         <span className="settings-health-card-label">Base de données</span>
                         <span className="settings-health-card-val">
-                          {health.database === 'connected' ? 'Connectée' : 'Erreur'}
+                          {isOk(health.database) ? 'Connectée' : 'Erreur'}
                         </span>
                       </div>
-                      <span className={`settings-health-dot ${health.database === 'connected' ? 'settings-health-dot--ok' : 'settings-health-dot--err'}`} />
+                      <span className={`settings-health-dot ${isOk(health.database) ? 'settings-health-dot--ok' : 'settings-health-dot--err'}`} />
                     </div>
-                    <div className={`settings-health-card ${countStatus(healthCounts.users)}`}>
+                    <div className={`settings-health-card ${isOk(health.users) ? 'settings-health-card--ok' : 'settings-health-card--err'}`}>
                       <FiUsers size={22} />
                       <div className="settings-health-card-info">
                         <span className="settings-health-card-label">Utilisateurs</span>
-                        <span className="settings-health-card-val">{formatCount(healthCounts.users)}</span>
+                        <span className="settings-health-card-val">
+                          {isOk(health.users) ? 'Opérationnel' : 'Erreur'}
+                        </span>
                       </div>
-                      <span className={`settings-health-dot ${countStatus(healthCounts.users).includes('--ok') ? 'settings-health-dot--ok' : 'settings-health-dot--err'}`} />
+                      <span className={`settings-health-dot ${isOk(health.users) ? 'settings-health-dot--ok' : 'settings-health-dot--err'}`} />
                     </div>
-                    <div className={`settings-health-card ${countStatus(healthCounts.patients)}`}>
+                    <div className={`settings-health-card ${isOk(health.patients) ? 'settings-health-card--ok' : 'settings-health-card--err'}`}>
                       <FiFileText size={22} />
                       <div className="settings-health-card-info">
                         <span className="settings-health-card-label">Patients</span>
-                        <span className="settings-health-card-val">{formatCount(healthCounts.patients)}</span>
+                        <span className="settings-health-card-val">
+                          {isOk(health.patients) ? 'Opérationnel' : 'Erreur'}
+                        </span>
                       </div>
-                      <span className={`settings-health-dot ${countStatus(healthCounts.patients).includes('--ok') ? 'settings-health-dot--ok' : 'settings-health-dot--err'}`} />
+                      <span className={`settings-health-dot ${isOk(health.patients) ? 'settings-health-dot--ok' : 'settings-health-dot--err'}`} />
                     </div>
-                    <div className={`settings-health-card ${countStatus(healthCounts.appointments)}`}>
+                    <div className={`settings-health-card ${isOk(health.appointments) ? 'settings-health-card--ok' : 'settings-health-card--err'}`}>
                       <FiCalendar size={22} />
                       <div className="settings-health-card-info">
                         <span className="settings-health-card-label">Rendez-vous</span>
-                        <span className="settings-health-card-val">{formatCount(healthCounts.appointments)}</span>
+                        <span className="settings-health-card-val">
+                          {isOk(health.appointments) ? 'Opérationnel' : 'Erreur'}
+                        </span>
                       </div>
-                      <span className={`settings-health-dot ${countStatus(healthCounts.appointments).includes('--ok') ? 'settings-health-dot--ok' : 'settings-health-dot--err'}`} />
+                      <span className={`settings-health-dot ${isOk(health.appointments) ? 'settings-health-dot--ok' : 'settings-health-dot--err'}`} />
                     </div>
                   </div>
                 ) : (
