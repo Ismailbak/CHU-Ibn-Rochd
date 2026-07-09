@@ -14,7 +14,6 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
     "maintenanceMode": False,
     "emailAlerts": True,
     "sessionTimeout": 30,
-    "backupFrequency": "quotidien",
 }
 
 MAINTENANCE_MESSAGE = (
@@ -32,8 +31,9 @@ def load_settings() -> Dict[str, Any]:
             if isinstance(data, dict):
                 merged = DEFAULT_SETTINGS.copy()
                 merged.update(data)
-                # Branding is fixed
+                # Branding is fixed; drop removed settings keys
                 merged["platformName"] = DEFAULT_SETTINGS["platformName"]
+                merged.pop("backupFrequency", None)
                 return merged
         except (OSError, json.JSONDecodeError):
             pass
@@ -43,9 +43,14 @@ def load_settings() -> Dict[str, Any]:
 def save_settings(data: Dict[str, Any]) -> Dict[str, Any]:
     merged = DEFAULT_SETTINGS.copy()
     if isinstance(data, dict):
-        merged.update(data)
+        # Ignore removed / non-configurable keys from older clients
+        for key, value in data.items():
+            if key in ("backupFrequency",):
+                continue
+            merged[key] = value
     # Platform name is fixed branding — never overwrite from the admin form.
     merged["platformName"] = DEFAULT_SETTINGS["platformName"]
+    merged.pop("backupFrequency", None)
     try:
         merged["sessionTimeout"] = max(5, min(240, int(merged.get("sessionTimeout", 30))))
     except (TypeError, ValueError):

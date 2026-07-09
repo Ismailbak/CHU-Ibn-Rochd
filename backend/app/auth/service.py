@@ -41,7 +41,13 @@ def authenticate_user(db: Session, username: str, password: str):
 
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    # Prefer admin-configured session timeout so JWT and inactivity logout stay aligned.
+    try:
+        from app.core.platform_settings import get_session_timeout_minutes
+        minutes = get_session_timeout_minutes()
+    except Exception:
+        minutes = settings.ACCESS_TOKEN_EXPIRE_MINUTES
+    expire = datetime.utcnow() + timedelta(minutes=minutes)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../../components/layout/Layout';
-import { FiSave, FiSend, FiActivity, FiDatabase, FiUsers, FiCalendar, FiFileText, FiRefreshCw, FiSettings, FiBell, FiShield, FiCheckCircle, FiClock, FiHardDrive } from 'react-icons/fi';
+import { FiSave, FiSend, FiActivity, FiDatabase, FiUsers, FiCalendar, FiFileText, FiRefreshCw, FiSettings, FiBell, FiShield, FiCheckCircle, FiClock } from 'react-icons/fi';
 import { getSettings, saveSettings, getSystemHealth, broadcastNotification } from '../../api/api';
 import './AdminDashboard.css';
 import './AdminSettings.css';
@@ -149,19 +149,8 @@ function AdminSettings() {
                   </label>
                   <input type="number" min={5} max={240} className="settings-field-input settings-field-input--sm" value={settings.sessionTimeout || 30} onChange={(e) => { setSettings({ ...settings, sessionTimeout: parseInt(e.target.value) || 30 }); setSaved(false); }} />
                   <span className="settings-toggle-hint" style={{ display: 'block', marginTop: 6 }}>
-                    Déconnexion automatique après inactivité (appliqué après enregistrement)
+                    Déconnexion automatique et expiration du jeton JWT après inactivité (appliqué après enregistrement)
                   </span>
-                </div>
-                <div className="settings-field">
-                  <label className="settings-field-label">
-                    <FiHardDrive size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-                    Fréquence des sauvegardes
-                  </label>
-                  <select className="settings-field-input settings-field-input--md" value={settings.backupFrequency || 'quotidien'} onChange={(e) => { setSettings({ ...settings, backupFrequency: e.target.value }); setSaved(false); }}>
-                    <option value="quotidien">Quotidien</option>
-                    <option value="hebdomadaire">Hebdomadaire</option>
-                    <option value="mensuel">Mensuel</option>
-                  </select>
                 </div>
               </div>
             </div>

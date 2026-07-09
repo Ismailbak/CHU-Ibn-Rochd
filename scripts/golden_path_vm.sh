@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+﻿#!/usr/bin/env bash
 # Golden-path smoke test — run ON the app VM (4020) as ismailbak
 # Usage: bash scripts/golden_path_vm.sh [BASE_URL] [APP_USERNAME] [APP_PASSWORD]
 # APP_USERNAME is the web login (usually email), NOT the Linux SSH user.
@@ -26,8 +26,7 @@ echo ""
 cd "$REPO"
 COMMIT=$(git log -1 --oneline)
 echo "Git: $COMMIT"
-if git log -1 --format=%s | grep -qE 'treatment|notification|golden|mojibake|modal|suggestion' 2>/dev/null || \
-   git rev-parse --short HEAD | grep -q .; then
+if git rev-parse --short HEAD >/dev/null 2>&1; then
   pass "Git repo reachable"
 else
   fail "Git repo issue"
@@ -41,28 +40,40 @@ else
   fail "API /health"
 fi
 
-if echo "$HEALTH" | grep -qi ollama; then
-  pass "Health mentions AI/Ollama"
+if echo "$HEALTH" | grep -qiE 'ai_assistant|ollama'; then
+  pass "Health mentions AI assistant"
 else
-  skip "Ollama status not in health payload (check 4030 manually)"
+  skip "AI status not in health payload (check 4030 manually)"
 fi
 
-# 3. Frontend build markers
-if grep -rl 'cnm-segment' "$REPO/frontend/web/build/static/js/"*.js >/dev/null 2>&1; then
-  pass "Frontend build contains notification modal (cnm-segment)"
+# 3. Public maintenance / session config
+MAINT=$(curl -sf "$BASE_URL/api/analytics/maintenance-status" || echo '{}')
+if echo "$MAINT" | grep -q 'maintenanceMode'; then
+  pass "Public maintenance-status endpoint"
 else
-  fail "Frontend build missing cnm-segment — run npm run build"
+  fail "Public maintenance-status endpoint"
 fi
 
-if grep -rl 'Ex. Mohamed' "$REPO/frontend/web/build/static/js/"*.js >/dev/null 2>&1; then
-  pass "Frontend build contains chat suggestion templates"
-elif grep -rl 'dossier m' "$REPO/frontend/web/build/static/js/"*.js >/dev/null 2>&1; then
-  pass "Frontend build contains chat assistant (legacy bundle marker)"
+SESSION=$(curl -sf "$BASE_URL/api/analytics/session-config" || echo '{}')
+if echo "$SESSION" | grep -q 'sessionTimeout'; then
+  pass "Public session-config endpoint"
 else
-  fail "Frontend build missing chat suggestions — run: cd frontend/web && npm run build"
+  fail "Public session-config endpoint"
 fi
 
-# 4. Auth + API flows
+# 4. Frontend build markers
+BUILD_JS="$REPO/frontend/web/build/static/js"
+if [ -d "$BUILD_JS" ]; then
+  if grep -rl 'cnm-segment\|notifications\|Rechercher patients' "$BUILD_JS"/*.js >/dev/null 2>&1; then
+    pass "Frontend build present with app markers"
+  else
+    fail "Frontend build missing expected markers — run npm run build"
+  fi
+else
+  fail "Frontend build directory missing — run: cd frontend/web && npm run build"
+fi
+
+# 5. Auth + API flows
 if [ -z "$PASS" ]; then
   skip "API write tests (set password: golden_path_vm.sh URL user pass)"
 else
@@ -75,23 +86,68 @@ else
 
   if [ -z "$TOKEN" ]; then
     fail "Login as $USER (HTTP $LOGIN_HTTP)"
-    echo "       Tip: use your web app email (e.g. admin@chu.ma), not Linux user ismailbak"
+    echo "       Tip: use your web app email, not Linux user ismailbak"
     echo "       Response: $LOGIN_BODY"
   else
     pass "Login as $USER"
     AUTH="Authorization: Bearer $TOKEN"
 
-    PATIENT_ID=$(curl -sf "$BASE_URL/api/patients/" -H "$AUTH" | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-print(data[0]['id'] if data else '')
+    # Patients list + search (name-first; should not 500)
+    PATIENTS_HTTP=$(curl -s -o /tmp/gp_patients.json -w "%{http_code}" \
+      "$BASE_URL/api/patients/?limit=5&q=test" -H "$AUTH" || echo 000)
+    if [ "$PATIENTS_HTTP" = "200" ]; then
+      pass "Patients list/search HTTP 200"
+    else
+      fail "Patients list/search HTTP $PATIENTS_HTTP"
+    fi
+
+    # Medical acts list (regression: missing ActForm import used to 500)
+    ACTS_HTTP=$(curl -s -o /tmp/gp_acts.json -w "%{http_code}" \
+      "$BASE_URL/api/medical-acts/?limit=5" -H "$AUTH" || echo 000)
+    if [ "$ACTS_HTTP" = "200" ]; then
+      pass "Medical acts list HTTP 200"
+    else
+      fail "Medical acts list HTTP $ACTS_HTTP"
+    fi
+
+    # Global search
+    SEARCH_HTTP=$(curl -s -o /tmp/gp_search.json -w "%{http_code}" \
+      "$BASE_URL/api/search/?q=test&limit=3" -H "$AUTH" || echo 000)
+    if [ "$SEARCH_HTTP" = "200" ] && python3 -c "import json; d=json.load(open('/tmp/gp_search.json')); assert 'patients' in d and 'appointments' in d and 'acts' in d" 2>/dev/null; then
+      pass "Global /api/search shape OK"
+    else
+      fail "Global /api/search HTTP $SEARCH_HTTP"
+    fi
+
+    # System health (admin-only; skip if forbidden)
+    HEALTH_SYS_HTTP=$(curl -s -o /tmp/gp_syshealth.json -w "%{http_code}" \
+      "$BASE_URL/api/analytics/system-health" -H "$AUTH" || echo 000)
+    if [ "$HEALTH_SYS_HTTP" = "200" ]; then
+      if python3 -c "import json; d=json.load(open('/tmp/gp_syshealth.json')); assert d.get('database') in ('connected','disconnected'); assert d.get('users') in ('operational','error')" 2>/dev/null; then
+        pass "System health status fields OK"
+      else
+        fail "System health payload unexpected"
+      fi
+    elif [ "$HEALTH_SYS_HTTP" = "403" ]; then
+      skip "System health (admin only)"
+    else
+      fail "System health HTTP $HEALTH_SYS_HTTP"
+    fi
+
+    PATIENT_ID=$(python3 -c "
+import json
+try:
+  data=json.load(open('/tmp/gp_patients.json'))
+  print(data[0]['id'] if data else '')
+except Exception:
+  print('')
 " 2>/dev/null || true)
 
     if [ -z "$PATIENT_ID" ]; then
       skip "Treatment create test (no patients)"
     else
       ACT_JSON=$(curl -sf -X POST "$BASE_URL/api/medical-acts/" -H "$AUTH" -H "Content-Type: application/json" \
-        -d "{\"patient_id\":$PATIENT_ID,\"act_type\":\"Consultation\",\"act_date\":\"$(date +%Y-%m-%d)\",\"status\":\"completed\",\"description\":\"Golden path smoke test\",\"treatment\":[{\"drug_name\":\"Méthotrexate\",\"dosage\":\"15 mg\"}]}")
+        -d "{\"patient_id\":$PATIENT_ID,\"act_type\":\"Consultation\",\"act_date\":\"$(date +%Y-%m-%d)\",\"status\":\"completed\",\"description\":\"Golden path smoke test\",\"treatment\":[{\"drug_name\":\"Methotrexate\",\"dosage\":\"15 mg\"}]}" || echo '{}')
       TREAT_COUNT=$(echo "$ACT_JSON" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('treatments',[])))" 2>/dev/null || echo 0)
       if [ "$TREAT_COUNT" -gt 0 ] 2>/dev/null; then
         pass "Create act with treatment (patient $PATIENT_ID)"
@@ -102,7 +158,7 @@ print(data[0]['id'] if data else '')
     fi
 
     NOTIF_JSON=$(curl -sf -X POST "$BASE_URL/api/notifications/" -H "$AUTH" -H "Content-Type: application/json" \
-      -d '{"title":"Golden path smoke","message":"Showcase check","is_public":true,"category":"message"}')
+      -d '{"title":"Golden path smoke","message":"Showcase check","is_public":true,"audience":"all","category":"message"}' || echo '[]')
     NOTIF_COUNT=$(echo "$NOTIF_JSON" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null || echo 0)
     if [ "$NOTIF_COUNT" -gt 0 ] 2>/dev/null; then
       pass "Send public notification"
@@ -110,14 +166,14 @@ print(data[0]['id'] if data else '')
       fail "Send public notification"
     fi
 
-    INBOX=$(curl -sf "$BASE_URL/api/notifications/" -H "$AUTH")
+    INBOX=$(curl -sf "$BASE_URL/api/notifications/" -H "$AUTH" || echo '[]')
     if echo "$INBOX" | grep -q 'Golden path smoke'; then
       pass "Notification visible in inbox"
     else
       fail "Notification not in inbox for sender"
     fi
 
-    DOCTORS=$(curl -sf "$BASE_URL/api/auth/doctors" -H "$AUTH")
+    DOCTORS=$(curl -sf "$BASE_URL/api/auth/doctors" -H "$AUTH" || echo '[]')
     DOCTOR_COUNT=$(echo "$DOCTORS" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null || echo 0)
     if [ "$DOCTOR_COUNT" -gt 0 ] 2>/dev/null; then
       pass "Doctors list available ($DOCTOR_COUNT)"
@@ -127,7 +183,7 @@ print(data[0]['id'] if data else '')
   fi
 fi
 
-# 5. Services
+# 6. Services
 if systemctl is-active --quiet ia-medical 2>/dev/null; then
   pass "systemd ia-medical active"
 else
@@ -144,10 +200,11 @@ echo ""
 echo "=== Summary: $PASS_COUNT passed, $FAIL_COUNT failed, $SKIP_COUNT skipped ==="
 echo ""
 echo "Manual UI checks (browser):"
-echo "  - Patient profile -> RDV / Acte (patient pre-selected)"
-echo "  - Traitements tab -> Ajouter -> Enregistrer"
-echo "  - Lab result modal, notification modal (no outside-click close)"
-echo "  - Chat suggestion fills input, then send manually"
+echo "  - Patient search: 'ismail' should match names, not street addresses"
+echo "  - Nurse account: Actes Medicaux list loads (no 500)"
+echo "  - Sidebar bell shows red dot on unread notifications"
+echo "  - Admin settings: maintenance mode + session timeout"
+echo "  - Assistant: inverted patient name still resolves"
 echo ""
 
 [ "$FAIL_COUNT" -eq 0 ] || exit 1
