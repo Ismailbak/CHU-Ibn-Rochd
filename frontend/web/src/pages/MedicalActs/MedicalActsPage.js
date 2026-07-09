@@ -91,8 +91,20 @@ const medicalActsService = {
         status: act.status,
         amount: act.amount || '',
         doctor: act.doctor_id || '',
-        // assigned_staff_ids is stored as a JSON string in older responses.
-        assignedStaff: act.assigned_staff_ids ? JSON.parse(act.assigned_staff_ids) : [],
+        assignedStaff: (() => {
+          if (Array.isArray(act.assigned_staff)) return act.assigned_staff;
+          if (!act.assigned_staff_ids) return [];
+          if (Array.isArray(act.assigned_staff_ids)) return act.assigned_staff_ids;
+          if (typeof act.assigned_staff_ids === 'string') {
+            try {
+              const parsed = JSON.parse(act.assigned_staff_ids);
+              return Array.isArray(parsed) ? parsed : [];
+            } catch {
+              return [];
+            }
+          }
+          return [];
+        })(),
         notes: act.notes || '',
         report: act.report || '',
         documents: act.documents || [],

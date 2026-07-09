@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session, joinedload  # joinedload used to avoid N+1 q
 from app.core.schemas.mojibake_safe import MojibakeSafeBase
 from app.core.database import get_db
 from app.models.medical_act import MedicalAct as MedicalActModel, ActDocument as ActDocumentModel, MedicalActStaff as MedicalActStaffModel, ActDiagnosis as ActDiagnosisModel, ActTreatment as ActTreatmentModel
+from app.models.form_system import ActForm, RefFormType
 from app.models.patient import Patient as PatientModel
 from app.auth.router import get_current_user_orm
 from app.auth.permissions import require_clinical_delete
@@ -288,22 +289,26 @@ def _enrich_acts(db: Session, rows: List[MedicalActModel]) -> List[dict]:
             treat_map.setdefault(treat.act_id, []).append(treat)
             
     # One DB query for all relevant forms (JOIN with ref_form_types to get form_name and form_label)
-    forms = (
-        db.query(ActForm, RefFormType.form_name, RefFormType.form_label)
-        .join(RefFormType, ActForm.ref_form_type_id == RefFormType.id)
-        .filter(ActForm.act_id.in_(act_ids))
-        .all()
-    )
     form_map = {}
-    for f, form_name, form_label in forms:
-        form_map.setdefault(f.act_id, []).append({
-            "id": f.id,
-            "act_id": f.act_id,
-            "ref_form_type_id": f.ref_form_type_id,
-            "form_table_id": f.form_table_id,
-            "form_name": form_name,
-            "form_label": form_label
-        })
+    try:
+        forms = (
+            db.query(ActForm, RefFormType.form_name, RefFormType.form_label)
+            .join(RefFormType, ActForm.ref_form_type_id == RefFormType.id)
+            .filter(ActForm.act_id.in_(act_ids))
+            .all()
+        )
+        for f, form_name, form_label in forms:
+            form_map.setdefault(f.act_id, []).append({
+                "id": f.id,
+                "act_id": f.act_id,
+                "ref_form_type_id": f.ref_form_type_id,
+                "form_table_id": f.form_table_id,
+                "form_name": form_name,
+                "form_label": form_label,
+            })
+    except Exception:
+        # Forms are optional enrichment; never fail the acts list if tables/schema differ.
+        db.rollback()
 
     return [_act_to_dict(
         row, 
