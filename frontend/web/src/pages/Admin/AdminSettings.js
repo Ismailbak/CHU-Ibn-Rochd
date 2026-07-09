@@ -138,9 +138,6 @@ function AdminSettings() {
                     disabled
                     title="Le nom de la plateforme ne peut pas être modifié"
                   />
-                  <span className="settings-toggle-hint" style={{ display: 'block', marginTop: 6 }}>
-                    Nom fixe — non modifiable
-                  </span>
                 </div>
                 <div className="settings-field">
                   <label className="settings-field-label">
