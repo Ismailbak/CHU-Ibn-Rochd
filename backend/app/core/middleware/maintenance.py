@@ -26,6 +26,7 @@ _ALWAYS_ALLOW_EXACT = {
     "/api/auth/login",
     "/api/auth/forgot-password",
     "/api/analytics/maintenance-status",
+    "/api/analytics/session-config",
 }
 
 

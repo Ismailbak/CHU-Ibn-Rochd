@@ -457,6 +457,7 @@ def get_system_health(
 
 from app.core.platform_settings import (
     MAINTENANCE_MESSAGE,
+    get_session_timeout_minutes,
     is_maintenance_mode,
     load_settings as _load_settings,
     save_settings as _save_settings,
@@ -470,7 +471,14 @@ def get_maintenance_status():
     return {
         "maintenanceMode": enabled,
         "message": MAINTENANCE_MESSAGE if enabled else None,
+        "sessionTimeout": get_session_timeout_minutes(),
     }
+
+
+@router.get("/session-config")
+def get_session_config():
+    """Public session policy used by the frontend inactivity logout."""
+    return {"sessionTimeout": get_session_timeout_minutes()}
 
 
 @router.get("/settings")

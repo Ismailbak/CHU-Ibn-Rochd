@@ -32,6 +32,8 @@ def load_settings() -> Dict[str, Any]:
             if isinstance(data, dict):
                 merged = DEFAULT_SETTINGS.copy()
                 merged.update(data)
+                # Branding is fixed
+                merged["platformName"] = DEFAULT_SETTINGS["platformName"]
                 return merged
         except (OSError, json.JSONDecodeError):
             pass
@@ -42,6 +44,12 @@ def save_settings(data: Dict[str, Any]) -> Dict[str, Any]:
     merged = DEFAULT_SETTINGS.copy()
     if isinstance(data, dict):
         merged.update(data)
+    # Platform name is fixed branding — never overwrite from the admin form.
+    merged["platformName"] = DEFAULT_SETTINGS["platformName"]
+    try:
+        merged["sessionTimeout"] = max(5, min(240, int(merged.get("sessionTimeout", 30))))
+    except (TypeError, ValueError):
+        merged["sessionTimeout"] = 30
     with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
         json.dump(merged, f, ensure_ascii=False, indent=2)
     return merged
@@ -49,3 +57,13 @@ def save_settings(data: Dict[str, Any]) -> Dict[str, Any]:
 
 def is_maintenance_mode() -> bool:
     return bool(load_settings().get("maintenanceMode"))
+
+
+def get_session_timeout_minutes() -> int:
+    """Inactivity logout delay in minutes (clamped)."""
+    raw = load_settings().get("sessionTimeout", 30)
+    try:
+        minutes = int(raw)
+    except (TypeError, ValueError):
+        minutes = 30
+    return max(5, min(240, minutes))

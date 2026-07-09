@@ -131,7 +131,16 @@ function AdminSettings() {
               <div className="settings-card-body">
                 <div className="settings-field">
                   <label className="settings-field-label">Nom de la plateforme</label>
-                  <input className="settings-field-input" value={settings.platformName || ''} onChange={(e) => { setSettings({ ...settings, platformName: e.target.value }); setSaved(false); }} />
+                  <input
+                    className="settings-field-input"
+                    value="RhumatoAI"
+                    readOnly
+                    disabled
+                    title="Le nom de la plateforme ne peut pas être modifié"
+                  />
+                  <span className="settings-toggle-hint" style={{ display: 'block', marginTop: 6 }}>
+                    Nom fixe — non modifiable
+                  </span>
                 </div>
                 <div className="settings-field">
                   <label className="settings-field-label">
@@ -139,6 +148,9 @@ function AdminSettings() {
                     Délai de session (minutes)
                   </label>
                   <input type="number" min={5} max={240} className="settings-field-input settings-field-input--sm" value={settings.sessionTimeout || 30} onChange={(e) => { setSettings({ ...settings, sessionTimeout: parseInt(e.target.value) || 30 }); setSaved(false); }} />
+                  <span className="settings-toggle-hint" style={{ display: 'block', marginTop: 6 }}>
+                    Déconnexion automatique après inactivité (appliqué après enregistrement)
+                  </span>
                 </div>
                 <div className="settings-field">
                   <label className="settings-field-label">

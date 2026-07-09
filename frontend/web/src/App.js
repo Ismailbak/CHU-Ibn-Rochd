@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { ToastProvider } from './components/common';
-import { getCurrentUser, getMaintenanceStatus } from './api/api';
+import { getCurrentUser, getMaintenanceStatus, getSessionConfig } from './api/api';
 import LoginPage from './pages/Login';
 import ForgotPasswordPage from './pages/Login/ForgotPasswordPage';
 import DashboardPage from './pages/Dashboard';
@@ -24,7 +24,7 @@ import ProfilePage from './pages/Profile';
 import MaintenancePage from './pages/Maintenance';
 import { TermsPage, PrivacyPage } from './pages/Legal';
 
-const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+const DEFAULT_SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes fallback
 const PUBLIC_PATHS = ['/', '/forgot-password', '/terms', '/privacy', '/maintenance'];
 
 function clearAuth() {
@@ -168,6 +168,23 @@ function InactivityGuard({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const timerRef = useRef(null);
+  const timeoutMsRef = useRef(DEFAULT_SESSION_TIMEOUT_MS);
+
+  useEffect(() => {
+    let mounted = true;
+    getSessionConfig()
+      .then((res) => {
+        if (!mounted) return;
+        const minutes = Number(res.data?.sessionTimeout);
+        if (Number.isFinite(minutes) && minutes >= 5) {
+          timeoutMsRef.current = Math.min(240, minutes) * 60 * 1000;
+        }
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, [location.pathname]);
 
   const logout = useCallback(() => {
     clearAuth();
@@ -177,7 +194,7 @@ function InactivityGuard({ children }) {
   const resetTimer = useCallback(() => {
     if (!localStorage.getItem('token')) return;
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(logout, INACTIVITY_TIMEOUT);
+    timerRef.current = setTimeout(logout, timeoutMsRef.current || DEFAULT_SESSION_TIMEOUT_MS);
   }, [logout]);
 
   useEffect(() => {

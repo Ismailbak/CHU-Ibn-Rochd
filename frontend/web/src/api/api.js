@@ -324,6 +324,7 @@ export const getUserDetail = (userId) => api.get(`/auth/users/${userId}`);
 export const getSettings = () => api.get('/analytics/settings');
 export const saveSettings = (data) => api.put('/analytics/settings', data);
 export const getMaintenanceStatus = () => api.get('/analytics/maintenance-status');
+export const getSessionConfig = () => api.get('/analytics/session-config');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // FORMS SYSTEM - Reference Data & Form CRUD
