@@ -196,7 +196,7 @@ function AdminSettings() {
                 <div className="settings-toggle-row">
                   <div className="settings-toggle-info">
                     <span className="settings-toggle-label">Mode maintenance</span>
-                    <span className="settings-toggle-hint">Bloquer l'accès public à la plateforme</span>
+                    <span className="settings-toggle-hint">Seuls les administrateurs gardent l'accès ; les autres voient un écran de maintenance</span>
                   </div>
                   <button type="button" className={`admin-toggle ${settings.maintenanceMode ? 'active' : ''}`} onClick={() => toggle('maintenanceMode')} />
                 </div>

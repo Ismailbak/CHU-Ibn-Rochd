@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { ToastProvider } from './components/common';
-import { getCurrentUser } from './api/api';
+import { getCurrentUser, getMaintenanceStatus } from './api/api';
 import LoginPage from './pages/Login';
 import ForgotPasswordPage from './pages/Login/ForgotPasswordPage';
 import DashboardPage from './pages/Dashboard';
@@ -21,26 +21,90 @@ import ChatPage from './pages/Chat/ChatPage';
 import AnalyticsPage from './pages/Analytics';
 import NotificationsPage from './pages/Notifications';
 import ProfilePage from './pages/Profile';
+import MaintenancePage from './pages/Maintenance';
 import { TermsPage, PrivacyPage } from './pages/Legal';
 
 const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
-const PUBLIC_PATHS = ['/', '/forgot-password', '/terms', '/privacy'];
+const PUBLIC_PATHS = ['/', '/forgot-password', '/terms', '/privacy', '/maintenance'];
 
 function clearAuth() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
 }
 
+function readStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem('user') || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function MaintenanceGate({ children }) {
+  const location = useLocation();
+  const [state, setState] = useState({ loading: true, enabled: false, message: null });
+
+  useEffect(() => {
+    let mounted = true;
+    const check = async () => {
+      try {
+        const res = await getMaintenanceStatus();
+        if (!mounted) return;
+        setState({
+          loading: false,
+          enabled: Boolean(res.data?.maintenanceMode),
+          message: res.data?.message || null,
+        });
+      } catch {
+        if (!mounted) return;
+        setState((prev) => ({ ...prev, loading: false }));
+      }
+    };
+    check();
+    const timer = setInterval(check, 30000);
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+    };
+  }, [location.pathname]);
+
+  if (state.loading && !PUBLIC_PATHS.includes(location.pathname)) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: '#64748B' }}>
+        Vérification de la disponibilité...
+      </div>
+    );
+  }
+
+  const user = readStoredUser();
+  const isAdmin = Boolean(user?.is_admin);
+  const onAllowedPath = PUBLIC_PATHS.includes(location.pathname) || location.pathname.startsWith('/admin');
+
+  if (state.enabled && !isAdmin && !onAllowedPath) {
+    return <MaintenancePage message={state.message} />;
+  }
+
+  if (state.enabled && !isAdmin && location.pathname === '/maintenance') {
+    return <MaintenancePage message={state.message} />;
+  }
+
+  if (!state.enabled && location.pathname === '/maintenance') {
+    return <Navigate to={localStorage.getItem('token') ? '/dashboard' : '/'} replace />;
+  }
+
+  return children;
+}
+
 function AuthRoute({ children, adminOnly = false }) {
   const location = useLocation();
-  const [state, setState] = useState({ status: 'checking', user: null });
+  const [state, setState] = useState({ status: 'checking', user: null, maintenance: false, maintenanceMessage: null });
 
   useEffect(() => {
     let isMounted = true;
     const token = localStorage.getItem('token');
 
     if (!token) {
-      setState({ status: 'unauthenticated', user: null });
+      setState({ status: 'unauthenticated', user: null, maintenance: false, maintenanceMessage: null });
       return () => {
         isMounted = false;
       };
@@ -51,12 +115,25 @@ function AuthRoute({ children, adminOnly = false }) {
         if (!isMounted) return;
         const user = res.data?.user || res.data;
         localStorage.setItem('user', JSON.stringify(user));
-        setState({ status: 'authenticated', user });
+        setState({ status: 'authenticated', user, maintenance: false, maintenanceMessage: null });
       })
-      .catch(() => {
+      .catch(async (err) => {
         if (!isMounted) return;
+        const data = err?.response?.data;
+        const isMaintenance =
+          err?.response?.status === 503 &&
+          (data?.code === 'maintenance' || data?.maintenanceMode === true);
+        if (isMaintenance) {
+          setState({
+            status: 'maintenance',
+            user: null,
+            maintenance: true,
+            maintenanceMessage: data?.detail || null,
+          });
+          return;
+        }
         clearAuth();
-        setState({ status: 'unauthenticated', user: null });
+        setState({ status: 'unauthenticated', user: null, maintenance: false, maintenanceMessage: null });
       });
 
     return () => {
@@ -70,6 +147,10 @@ function AuthRoute({ children, adminOnly = false }) {
         Vérification de la session...
       </div>
     );
+  }
+
+  if (state.status === 'maintenance') {
+    return <MaintenancePage message={state.maintenanceMessage} />;
   }
 
   if (state.status === 'unauthenticated') {
@@ -121,10 +202,12 @@ function App() {
   return (
     <BrowserRouter>
       <ToastProvider>
+      <MaintenanceGate>
       <InactivityGuard>
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/maintenance" element={<MaintenancePage />} />
         <Route path="/signup" element={<Navigate to="/" replace />} />
         <Route path="/dashboard" element={<AuthRoute><DashboardPage /></AuthRoute>} />
         <Route path="/admin" element={<AuthRoute adminOnly><AdminDashboard /></AuthRoute>} />
@@ -147,6 +230,7 @@ function App() {
         <Route path="/privacy" element={<PrivacyPage />} />
       </Routes>
       </InactivityGuard>
+      </MaintenanceGate>
       </ToastProvider>
     </BrowserRouter>
   );

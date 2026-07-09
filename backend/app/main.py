@@ -11,6 +11,7 @@ from app.auth.router import router as auth_router
 from app.chat.router import router as chat_router
 from app.core.config import settings
 from app.core.database import Base, engine
+from app.core.middleware.maintenance import MaintenanceMiddleware
 from app.core.middleware.mojibake import MojibakeRepairMiddleware
 from app.core.utils.rate_limiting import setup_rate_limiting
 from app.forms.router import router as forms_router
@@ -58,6 +59,9 @@ app.add_middleware(
 
 # Repair legacy UTF-8 mojibake in JSON responses (patients, diagnoses, cities, etc.)
 app.add_middleware(MojibakeRepairMiddleware)
+
+# Block non-admin API access when maintenance mode is enabled
+app.add_middleware(MaintenanceMiddleware)
 
 # Setup rate limiting
 setup_rate_limiting(app)

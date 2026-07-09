@@ -93,7 +93,27 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response && error.response.status === 401 && localStorage.getItem('token')) {
+    const status = error.response?.status;
+    const data = error.response?.data;
+    const isMaintenance =
+      status === 503 &&
+      (data?.code === 'maintenance' || data?.maintenanceMode === true);
+
+    if (isMaintenance) {
+      try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (!user?.is_admin && window.location.pathname !== '/maintenance') {
+          window.location.href = '/maintenance';
+        }
+      } catch {
+        if (window.location.pathname !== '/maintenance') {
+          window.location.href = '/maintenance';
+        }
+      }
+      return Promise.reject(error);
+    }
+
+    if (status === 401 && localStorage.getItem('token')) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/';
@@ -303,6 +323,7 @@ export const getUserDetail = (userId) => api.get(`/auth/users/${userId}`);
 // Settings
 export const getSettings = () => api.get('/analytics/settings');
 export const saveSettings = (data) => api.put('/analytics/settings', data);
+export const getMaintenanceStatus = () => api.get('/analytics/maintenance-status');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // FORMS SYSTEM - Reference Data & Form CRUD

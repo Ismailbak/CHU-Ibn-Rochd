@@ -107,7 +107,23 @@ def login(
     if not user.is_active and user.role != "admin":
         log_action(db, action="LOGIN_FAILURE", user_id=user.id, username=user.username, status="failure", details="Account deactivated", ip_address=client_ip)
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Votre compte est désactivé. Contactez un administrateur.")
-    
+
+    from app.core.platform_settings import MAINTENANCE_MESSAGE, is_maintenance_mode
+    if is_maintenance_mode() and not user.is_admin:
+        log_action(
+            db,
+            action="LOGIN_FAILURE",
+            user_id=user.id,
+            username=user.username,
+            status="failure",
+            details="Blocked by maintenance mode",
+            ip_address=client_ip,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=MAINTENANCE_MESSAGE,
+        )
+
     access_token = create_access_token(data={"sub": user.username})
     log_action(db, action="LOGIN_SUCCESS", user_id=user.id, username=user.username, status="success", ip_address=client_ip)
     return {"access_token": access_token, "token_type": "bearer"}

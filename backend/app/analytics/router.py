@@ -453,34 +453,24 @@ def get_system_health(
     }
 
 
-# ─── Settings (persisted as JSON in a simple table) ───────────────────────────
+# ─── Settings / maintenance ───────────────────────────────────────────────────
 
-# We use a simple key-value approach with a single settings row in audit_logs
-# is overkill — instead use a file-based approach for simplicity.
-import os
-
-SETTINGS_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "platform_settings.json")
-
-DEFAULT_SETTINGS = {
-    "platformName": "RhumatoAI",
-    "notifications": True,
-    "maintenanceMode": False,
-    "emailAlerts": True,
-    "sessionTimeout": 30,
-    "backupFrequency": "quotidien",
-}
+from app.core.platform_settings import (
+    MAINTENANCE_MESSAGE,
+    is_maintenance_mode,
+    load_settings as _load_settings,
+    save_settings as _save_settings,
+)
 
 
-def _load_settings():
-    if os.path.exists(SETTINGS_FILE):
-        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return DEFAULT_SETTINGS.copy()
-
-
-def _save_settings(data):
-    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+@router.get("/maintenance-status")
+def get_maintenance_status():
+    """Public endpoint — used by the frontend to show the maintenance screen."""
+    enabled = is_maintenance_mode()
+    return {
+        "maintenanceMode": enabled,
+        "message": MAINTENANCE_MESSAGE if enabled else None,
+    }
 
 
 @router.get("/settings")
@@ -493,8 +483,8 @@ def save_settings(
     data: dict,
     current_user: User = Depends(require_admin),
 ):
-    _save_settings(data)
-    return {"message": "Settings saved", "settings": data}
+    saved = _save_settings(data if isinstance(data, dict) else {})
+    return {"message": "Settings saved", "settings": saved}
 
 
 # ─── Broadcast Notification ────────────────────────────────────────────────────

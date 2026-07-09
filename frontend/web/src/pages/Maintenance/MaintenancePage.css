@@ -1,0 +1,65 @@
+.maintenance-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 40%),
+    radial-gradient(circle at bottom left, rgba(239, 68, 68, 0.08), transparent 35%),
+    #F8FAFC;
+}
+
+.maintenance-card {
+  width: min(480px, 100%);
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 20px;
+  padding: 40px 32px;
+  text-align: center;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+}
+
+.maintenance-icon-wrap {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  color: #B45309;
+  background: #FEF3C7;
+}
+
+.maintenance-card h1 {
+  margin: 0 0 12px;
+  font-size: 1.5rem;
+  color: #0F172A;
+}
+
+.maintenance-card p {
+  margin: 0;
+  color: #64748B;
+  line-height: 1.55;
+  font-size: 0.98rem;
+}
+
+.maintenance-actions {
+  margin-top: 28px;
+}
+
+.maintenance-admin-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: #1E2A4A;
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.maintenance-admin-link:hover {
+  background: #151D33;
+}

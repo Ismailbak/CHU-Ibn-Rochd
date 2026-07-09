@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FiMail, FiLock, FiEye, FiEyeOff, FiActivity, FiAlertCircle } from 'react-icons/fi';
-import { login, getCurrentUser } from '../../api/api';
+import { FiMail, FiLock, FiEye, FiEyeOff, FiActivity, FiAlertCircle, FiTool } from 'react-icons/fi';
+import { login, getCurrentUser, getMaintenanceStatus, formatApiError } from '../../api/api';
 import './LoginPage.css';
 
 function LoginPage() {
@@ -11,7 +11,18 @@ function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState('');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    getMaintenanceStatus()
+      .then((res) => {
+        setMaintenanceMode(Boolean(res.data?.maintenanceMode));
+        setMaintenanceMessage(res.data?.message || '');
+      })
+      .catch(() => {});
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -41,8 +52,16 @@ function LoginPage() {
       } else {
         navigate('/dashboard');
       }
-    } catch {
-      setError('Email ou mot de passe incorrect');
+    } catch (err) {
+      const status = err?.response?.status;
+      const detail = formatApiError(err, '');
+      if (status === 503 || err?.response?.data?.code === 'maintenance') {
+        setMaintenanceMode(true);
+        setMaintenanceMessage(detail || maintenanceMessage);
+        setError(detail || "L'application est en maintenance. Accès réservé aux administrateurs.");
+      } else {
+        setError(detail || 'Email ou mot de passe incorrect');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -98,6 +117,16 @@ function LoginPage() {
             <h2>Connexion</h2>
             <p>Bienvenue ! Connectez-vous pour accéder à votre espace.</p>
           </div>
+
+          {maintenanceMode && (
+            <div className="auth-error" style={{ background: '#FEF3C7', color: '#92400E', borderColor: '#FCD34D' }}>
+              <FiTool />
+              <span>
+                {maintenanceMessage ||
+                  "Application en maintenance — seuls les administrateurs peuvent se connecter."}
+              </span>
+            </div>
+          )}
 
           {error && (
             <div className="auth-error">
