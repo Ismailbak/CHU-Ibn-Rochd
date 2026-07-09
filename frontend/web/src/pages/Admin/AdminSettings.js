@@ -85,6 +85,12 @@ function AdminSettings() {
   };
 
   const isOk = (value) => value === 'operational' || value === 'connected' || value === 'running' || value === 'ok';
+  const healthLabels = {
+    database: { ok: 'Connectée', err: 'Hors ligne' },
+    users: { ok: 'Accessible', err: 'Inaccessible' },
+    patients: { ok: 'Disponible', err: 'Indisponible' },
+    appointments: { ok: 'Synchronisé', err: 'Désynchronisé' },
+  };
 
   if (isLoading || !settings) {
     return (
@@ -235,7 +241,7 @@ function AdminSettings() {
                       <div className="settings-health-card-info">
                         <span className="settings-health-card-label">Base de données</span>
                         <span className="settings-health-card-val">
-                          {isOk(health.database) ? 'Connectée' : 'Erreur'}
+                          {isOk(health.database) ? healthLabels.database.ok : healthLabels.database.err}
                         </span>
                       </div>
                       <span className={`settings-health-dot ${isOk(health.database) ? 'settings-health-dot--ok' : 'settings-health-dot--err'}`} />
@@ -245,7 +251,7 @@ function AdminSettings() {
                       <div className="settings-health-card-info">
                         <span className="settings-health-card-label">Utilisateurs</span>
                         <span className="settings-health-card-val">
-                          {isOk(health.users) ? 'Opérationnel' : 'Erreur'}
+                          {isOk(health.users) ? healthLabels.users.ok : healthLabels.users.err}
                         </span>
                       </div>
                       <span className={`settings-health-dot ${isOk(health.users) ? 'settings-health-dot--ok' : 'settings-health-dot--err'}`} />
@@ -255,7 +261,7 @@ function AdminSettings() {
                       <div className="settings-health-card-info">
                         <span className="settings-health-card-label">Patients</span>
                         <span className="settings-health-card-val">
-                          {isOk(health.patients) ? 'Opérationnel' : 'Erreur'}
+                          {isOk(health.patients) ? healthLabels.patients.ok : healthLabels.patients.err}
                         </span>
                       </div>
                       <span className={`settings-health-dot ${isOk(health.patients) ? 'settings-health-dot--ok' : 'settings-health-dot--err'}`} />
@@ -265,7 +271,7 @@ function AdminSettings() {
                       <div className="settings-health-card-info">
                         <span className="settings-health-card-label">Rendez-vous</span>
                         <span className="settings-health-card-val">
-                          {isOk(health.appointments) ? 'Opérationnel' : 'Erreur'}
+                          {isOk(health.appointments) ? healthLabels.appointments.ok : healthLabels.appointments.err}
                         </span>
                       </div>
                       <span className={`settings-health-dot ${isOk(health.appointments) ? 'settings-health-dot--ok' : 'settings-health-dot--err'}`} />
