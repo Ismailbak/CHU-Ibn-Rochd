@@ -101,12 +101,17 @@ function NotificationsPage() {
     }
   });
 
+  const notifySidebar = () => {
+    window.dispatchEvent(new Event('notifications:changed'));
+  };
+
   const markAsRead = async (id) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
     );
     try {
       await apiMarkRead(id);
+      notifySidebar();
     } catch {
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, isRead: false } : n))
@@ -129,6 +134,7 @@ function NotificationsPage() {
       setNotifications(notifications.map((n) =>
         n.isReceived ? { ...n, isRead: true } : n
       ));
+      notifySidebar();
       toast.success('Toutes les notifications reçues marquées comme lues');
     } catch {
       toast.error('Erreur lors du marquage');

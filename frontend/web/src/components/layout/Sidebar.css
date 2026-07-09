@@ -60,6 +60,26 @@
   border-radius: 12px;
   transition: all 0.2s ease;
   text-decoration: none;
+  position: relative;
+}
+
+.nav-item-icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-unread-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #EF4444;
+  box-shadow: 0 0 0 2px #1E2A4A;
+  pointer-events: none;
 }
 
 .nav-item:hover {
