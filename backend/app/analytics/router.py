@@ -1,5 +1,5 @@
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
@@ -429,15 +429,35 @@ def get_system_health(
     except Exception:
         pass
 
-    total_users = db.query(func.count(User.id)).scalar() or 0
-    total_patients = db.query(func.count(PatientModel.id)).scalar() or 0
-    total_appointments = db.query(func.count(AppointmentModel.id)).scalar() or 0
-    total_medical_acts = db.query(func.count(MedicalActModel.id)).scalar() or 0
-    total_audit_logs = db.query(func.count(AuditLog.id)).scalar() or 0
+    total_users = 0
+    total_patients = 0
+    total_appointments = 0
+    total_medical_acts = 0
+    total_audit_logs = 0
+    counts_ok = False
+    if db_ok:
+        try:
+            total_users = db.query(func.count(User.id)).scalar() or 0
+            total_patients = db.query(func.count(PatientModel.id)).scalar() or 0
+            total_appointments = db.query(func.count(AppointmentModel.id)).scalar() or 0
+            total_medical_acts = db.query(func.count(MedicalActModel.id)).scalar() or 0
+            total_audit_logs = db.query(func.count(AuditLog.id)).scalar() or 0
+            counts_ok = True
+        except Exception:
+            db.rollback()
 
     return {
         "database": "connected" if db_ok else "disconnected",
         "api": "running",
+        "status": "ok" if db_ok and counts_ok else "degraded",
+        "counts": {
+            "users": total_users if counts_ok else None,
+            "patients": total_patients if counts_ok else None,
+            "appointments": total_appointments if counts_ok else None,
+            "medical_acts": total_medical_acts if counts_ok else None,
+            "audit_logs": total_audit_logs if counts_ok else None,
+        },
+        # Legacy flat fields (kept for compatibility)
         "total_users": total_users,
         "total_patients": total_patients,
         "total_appointments": total_appointments,
@@ -503,13 +523,25 @@ def broadcast_notification(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
+    title = (data.title or "").strip()
+    message = (data.message or "").strip()
+    if not title or not message:
+        raise HTTPException(status_code=400, detail="Titre et message sont requis.")
+
     users = db.query(User).filter(User.is_active == True).all()
+    if not users:
+        raise HTTPException(status_code=400, detail="Aucun utilisateur actif trouvé.")
+
     count = 0
     for u in users:
         notif = NotificationModel(
             user_id=u.id,
-            title=data.title,
-            message=data.message,
+            sender_id=current_user.id,
+            title=title,
+            message=message,
+            is_public=True,
+            category="system",
+            read=False,
         )
         db.add(notif)
         count += 1
@@ -517,5 +549,5 @@ def broadcast_notification(
     from app.analytics.audit import log_action
     log_action(db, action="BROADCAST_NOTIFICATION", user_id=current_user.id,
                username=current_user.username, status="success",
-               details=f"Sent to {count} users: {data.title}")
+               details=f"Sent to {count} users: {title}")
     return {"message": f"Notification envoyée à {count} utilisateurs", "count": count}

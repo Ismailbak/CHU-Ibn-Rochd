@@ -381,8 +381,16 @@ export const getDynamicResponsesForAct = (actId) => api.get(`/forms/responses/ac
 // System health
 export const getSystemHealth = () => api.get('/analytics/system-health');
 
-// Broadcast notification
-export const broadcastNotification = (title, message) =>
-  api.post('/analytics/broadcast', { title, message });
+// Broadcast notification — accepts either (title, message) or ({ title, message })
+export const broadcastNotification = (titleOrPayload, message) => {
+  const payload =
+    typeof titleOrPayload === 'object' && titleOrPayload !== null
+      ? {
+          title: titleOrPayload.title,
+          message: titleOrPayload.message,
+        }
+      : { title: titleOrPayload, message };
+  return api.post('/analytics/broadcast', payload);
+};
 
 export default api;

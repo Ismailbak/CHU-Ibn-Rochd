@@ -16,10 +16,12 @@ function AdminSettings() {
   const [broadcastMsg, setBroadcastMsg] = useState('');
   const [broadcastSent, setBroadcastSent] = useState(false);
   const [broadcastLoading, setBroadcastLoading] = useState(false);
+  const [broadcastError, setBroadcastError] = useState('');
 
   // System health
   const [health, setHealth] = useState(null);
   const [healthLoading, setHealthLoading] = useState(false);
+  const [healthError, setHealthError] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -37,11 +39,14 @@ function AdminSettings() {
 
   const fetchHealth = async () => {
     setHealthLoading(true);
+    setHealthError('');
     try {
       const res = await getSystemHealth();
       setHealth(res.data);
     } catch (err) {
       console.error('Failed to fetch health:', err);
+      setHealth(null);
+      setHealthError(err.response?.data?.detail || 'Impossible de charger la santé du système.');
     } finally { setHealthLoading(false); }
   };
 
@@ -65,6 +70,8 @@ function AdminSettings() {
     e.preventDefault();
     if (!broadcastTitle.trim() || !broadcastMsg.trim()) return;
     setBroadcastLoading(true);
+    setBroadcastError('');
+    setBroadcastSent(false);
     try {
       await broadcastNotification({ title: broadcastTitle.trim(), message: broadcastMsg.trim() });
       setBroadcastSent(true);
@@ -73,8 +80,17 @@ function AdminSettings() {
       setTimeout(() => setBroadcastSent(false), 3000);
     } catch (err) {
       console.error('Broadcast failed:', err);
+      setBroadcastError(err.response?.data?.detail || 'Échec de l\'envoi de la notification.');
     } finally { setBroadcastLoading(false); }
   };
+
+  const healthCounts = health?.counts || {
+    users: health?.total_users,
+    patients: health?.total_patients,
+    appointments: health?.total_appointments,
+  };
+  const countStatus = (value) => (value === null || value === undefined ? 'settings-health-card--err' : 'settings-health-card--ok');
+  const formatCount = (value) => (value === null || value === undefined ? '-' : Number(value).toLocaleString('fr-FR'));
 
   if (isLoading || !settings) {
     return (
@@ -230,33 +246,36 @@ function AdminSettings() {
                       </div>
                       <span className={`settings-health-dot ${health.database === 'connected' ? 'settings-health-dot--ok' : 'settings-health-dot--err'}`} />
                     </div>
-                    <div className="settings-health-card">
+                    <div className={`settings-health-card ${countStatus(healthCounts.users)}`}>
                       <FiUsers size={22} />
                       <div className="settings-health-card-info">
                         <span className="settings-health-card-label">Utilisateurs</span>
-                        <span className="settings-health-card-val">{health.counts?.users ?? '-'}</span>
+                        <span className="settings-health-card-val">{formatCount(healthCounts.users)}</span>
                       </div>
+                      <span className={`settings-health-dot ${countStatus(healthCounts.users).includes('--ok') ? 'settings-health-dot--ok' : 'settings-health-dot--err'}`} />
                     </div>
-                    <div className="settings-health-card">
+                    <div className={`settings-health-card ${countStatus(healthCounts.patients)}`}>
                       <FiFileText size={22} />
                       <div className="settings-health-card-info">
                         <span className="settings-health-card-label">Patients</span>
-                        <span className="settings-health-card-val">{health.counts?.patients ?? '-'}</span>
+                        <span className="settings-health-card-val">{formatCount(healthCounts.patients)}</span>
                       </div>
+                      <span className={`settings-health-dot ${countStatus(healthCounts.patients).includes('--ok') ? 'settings-health-dot--ok' : 'settings-health-dot--err'}`} />
                     </div>
-                    <div className="settings-health-card">
+                    <div className={`settings-health-card ${countStatus(healthCounts.appointments)}`}>
                       <FiCalendar size={22} />
                       <div className="settings-health-card-info">
                         <span className="settings-health-card-label">Rendez-vous</span>
-                        <span className="settings-health-card-val">{health.counts?.appointments ?? '-'}</span>
+                        <span className="settings-health-card-val">{formatCount(healthCounts.appointments)}</span>
                       </div>
+                      <span className={`settings-health-dot ${countStatus(healthCounts.appointments).includes('--ok') ? 'settings-health-dot--ok' : 'settings-health-dot--err'}`} />
                     </div>
                   </div>
                 ) : (
                   <div className="settings-health-empty">
                     {healthLoading ? (
                       <><div className="settings-loading-spinner settings-loading-spinner--sm" /><span>Chargement...</span></>
-                    ) : 'Indisponible'}
+                    ) : (healthError || 'Indisponible')}
                   </div>
                 )}
               </div>
@@ -281,6 +300,7 @@ function AdminSettings() {
                     <label className="settings-field-label">Message</label>
                     <textarea className="settings-field-input settings-textarea" placeholder="Détails de la notification..." required rows={4} value={broadcastMsg} onChange={(e) => setBroadcastMsg(e.target.value)} />
                   </div>
+                  {broadcastError && <span className="settings-error">{broadcastError}</span>}
                   <button type="submit" className={`settings-broadcast-btn ${broadcastSent ? 'settings-broadcast-btn--sent' : ''}`} disabled={broadcastLoading}>
                     {broadcastSent ? <FiCheckCircle size={16} /> : <FiSend size={16} />}
                     {broadcastLoading ? 'Envoi en cours...' : broadcastSent ? 'Envoyé avec succès !' : 'Diffuser la notification'}
