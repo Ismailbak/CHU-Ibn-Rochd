@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # Golden-path smoke test — run ON the app VM (4020) as ismailbak
 # Usage: bash scripts/golden_path_vm.sh [BASE_URL] [APP_USERNAME] [APP_PASSWORD]
 # APP_USERNAME is the web login (usually email), NOT the Linux SSH user.
