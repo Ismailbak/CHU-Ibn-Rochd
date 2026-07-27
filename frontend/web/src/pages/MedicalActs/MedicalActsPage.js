@@ -64,7 +64,7 @@ const medicalActsService = {
       notes: data.notes || '',
       status: data.status,
       doctor_id: data.doctorId || null,
-      amount: data.amount || '',
+      amount: data.amount === '' || data.amount == null ? null : data.amount,
       category: data.category || '',
     };
     await import('../../api/api').then(api => api.updateMedicalAct(data.id, mapped));
@@ -133,7 +133,7 @@ const medicalActsService = {
       status: data.status,
       doctor_id: data.doctorId || null,
       assigned_staff_ids: JSON.stringify(data.assignedStaffIds || []),
-      amount: data.amount || '',
+      amount: data.amount === '' || data.amount == null ? null : data.amount,
       category: data.category || '',
       diagnosis: data.diagnosis || '',
       treatment: data.treatment || '',
@@ -458,8 +458,15 @@ function DetailModal({ act, doctors = [], onClose, onSuccess }) {
               </p>
             </div>
             <div className="detail-section">
-              <h4>Montant</h4>
-              <p className="detail-value amount">{act.amount} DH</p>
+              <h4>Facturation</h4>
+              <p className="detail-value amount">
+                {act.amount ? `${act.amount} DH` : 'Non facturé'}
+              </p>
+              <p className="detail-value" style={{ marginTop: '6px' }}>
+                <span className={`act-status ${act.status === 'completed' ? 'completed' : 'pending'}`}>
+                  {act.status === 'completed' ? 'Terminé' : 'En cours'}
+                </span>
+              </p>
             </div>
           </div>
 
@@ -1007,10 +1014,16 @@ function MedicalActsPage() {
             <><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /></>
           ) : (
             <>
-              <StatCard icon={<FiFileText />} label="Total Actes" percentage="Ce mois" value={stats.total} color="blue" />
-              <StatCard icon={<FiClipboard />} label="Consultations" percentage="Ce mois" value={stats.consultations} color="green" />
-              <StatCard icon={<FiActivity />} label="Interventions" percentage="Ce mois" value={stats.interventions} color="pink" />
-              <StatCard icon={<FiUser />} label="Patients traités" percentage="Ce mois" value={stats.treatedPatients} color="yellow" />
+              <StatCard icon={<FiFileText />} label="Total Actes" percentage="Total" value={stats.total} color="blue" />
+              <StatCard icon={<FiClipboard />} label="Consultations" percentage="Total" value={stats.consultations} color="green" />
+              <StatCard
+                icon={<FiDollarSign />}
+                label="Facturation"
+                percentage="Montant total"
+                value={`${Number(stats.totalAmount || 0).toLocaleString('fr-FR')} DH`}
+                color="pink"
+              />
+              <StatCard icon={<FiUser />} label="Patients traités" percentage="Total" value={stats.treatedPatients} color="yellow" />
             </>
           )}
         </div>

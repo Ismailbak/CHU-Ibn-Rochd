@@ -5,8 +5,8 @@ import {
   ComposedChart
 } from 'recharts';
 import { 
-  FiTrendingUp, FiDownload, FiCalendar, FiUsers, 
-  FiActivity, FiPieChart, FiBarChart2, FiFileText
+  FiDownload, FiCalendar, FiUsers, 
+  FiActivity, FiPieChart, FiBarChart2, FiFileText, FiDollarSign
 } from 'react-icons/fi';
 import jsPDF from 'jspdf';
 import Layout from '../../components/layout/Layout';
@@ -35,6 +35,7 @@ const PERIOD_LABELS = {
   '3months': '3 derniers mois',
   '6months': '6 derniers mois',
   '1year': 'Cette année',
+  'all': 'Toute la période',
 };
 
 // Report theme (hospital-grade: single navy accent, grey text)
@@ -44,7 +45,7 @@ const PDF_ZEBRA = [248, 250, 252];
 const PDF_TOTAL_BG = [226, 232, 240];
 
 function AnalyticsPage() {
-  const [dateRange, setDateRange] = useState('6months');
+  const [dateRange, setDateRange] = useState('all');
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(true);
   const [summary, setSummary] = useState(null);
@@ -86,7 +87,17 @@ function AnalyticsPage() {
   const weeklyAppointmentsData = summary?.weekly_activity ?? [];
   const ageDistributionData = summary?.demographics ?? [];
   const activityTrendData = summary?.activity_trends ?? [];
+  const revenueTrendData = summary?.revenue_trends ?? [];
   const topTreatmentsData = summary?.treatments ?? [];
+  const totalRevenue = Number(summary?.total_revenue ?? revenueTrendData.reduce((sum, row) => sum + (Number(row.revenue) || 0), 0));
+  const billedActs = Number(summary?.billed_acts ?? 0);
+  const completedRevenue = Number(summary?.completed_revenue ?? 0);
+  const pendingRevenue = Number(summary?.pending_revenue ?? 0);
+  const fmtMoney = (value) => `${Number(value || 0).toLocaleString('fr-FR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })} DH`;
+  const totalRevenueLabel = fmtMoney(totalRevenue);
 
   const periodLabel = PERIOD_LABELS[dateRange] || dateRange;
 
@@ -247,6 +258,7 @@ function AnalyticsPage() {
         ['Âge moyen des patients', avgAge ? `${Number(avgAge).toFixed(1)} ans` : '—'],
         ['Diagnostics distincts (top 5 affichés)', fmtInt(commonDiagnoses.length)],
         ['Rendez-vous de la semaine en cours', fmtInt(weekTotalRdv)],
+        ['Facturation (période sélectionnée)', totalRevenueLabel],
       ]
     );
 
@@ -297,9 +309,33 @@ function AnalyticsPage() {
       );
     }
 
-    // ===== 5. Démographie =====
+    // ===== 4b. Facturation =====
+    if (revenueTrendData.length > 0) {
+      addSectionTitle(5, 'FACTURATION', `Montants facturés des actes médicaux — ${periodLabel}`);
+      addTable(
+        [
+          { label: 'Période', weight: 2 },
+          { label: 'Montant (DH)', weight: 1.5, align: 'right' },
+          { label: 'Part (%)', weight: 1, align: 'right' },
+        ],
+        revenueTrendData.slice(0, 12).map(r => [
+          r.period || '—',
+          Number(r.revenue || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+          pct(r.revenue || 0, totalRevenue),
+        ]),
+        {
+          totalsRow: [
+            'Total',
+            totalRevenue.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+            '100 %',
+          ],
+        }
+      );
+    }
+
+    // ===== 6. Démographie =====
     if (ageDistributionData.length > 0) {
-      addSectionTitle(5, 'DÉMOGRAPHIE DES PATIENTS', 'Distribution par tranche d\'âge et par sexe');
+      addSectionTitle(revenueTrendData.length > 0 ? 6 : 5, 'DÉMOGRAPHIE DES PATIENTS', 'Distribution par tranche d\'âge et par sexe');
       const demoTotals = ageDistributionData.reduce(
         (acc, r) => ({ m: acc.m + (r.male || 0), f: acc.f + (r.female || 0) }),
         { m: 0, f: 0 }
@@ -318,9 +354,9 @@ function AnalyticsPage() {
       );
     }
 
-    // ===== 6. Rendez-vous de la semaine =====
+    // ===== 7. Rendez-vous de la semaine =====
     if (weeklyAppointmentsData.length > 0) {
-      addSectionTitle(6, 'RENDEZ-VOUS DE LA SEMAINE EN COURS', 'Répartition journalière par motif');
+      addSectionTitle(revenueTrendData.length > 0 ? 7 : 6, 'RENDEZ-VOUS DE LA SEMAINE EN COURS', 'Répartition journalière par motif');
       const wTotals = weeklyAppointmentsData.reduce(
         (acc, d) => ({
           c: acc.c + (d.consultations || 0),
@@ -419,6 +455,7 @@ function AnalyticsPage() {
         rows: [
           ['Patients enregistrés', totalPatients],
           ['Âge moyen', avgAge ? `${Number(avgAge).toFixed(1)} ans` : ''],
+          ['Facturation (période)', totalRevenueLabel],
         ],
       },
       {
@@ -454,6 +491,14 @@ function AnalyticsPage() {
         headers: ['Rang', 'Traitement', 'Prescriptions'],
         rows: topTreatmentsData.map((t, i) => [i + 1, t.treatment, t.count || 0]),
       },
+      {
+        title: `Facturation — ${periodLabel}`,
+        headers: ['Période', 'Montant (DH)'],
+        rows: [
+          ...revenueTrendData.map(r => [r.period, Number(r.revenue || 0).toFixed(2)]),
+          ['Total', totalRevenue.toFixed(2)],
+        ],
+      },
     ]);
   };
 
@@ -475,6 +520,7 @@ function AnalyticsPage() {
                 <option value="3months">3 derniers mois</option>
                 <option value="6months">6 derniers mois</option>
                 <option value="1year">Cette année</option>
+                <option value="all">Toute la période</option>
               </select>
             </div>
             <button className="export-btn" onClick={handleExportPDF}>
@@ -503,6 +549,12 @@ function AnalyticsPage() {
             onClick={() => setActiveTab('activity')}
           >
             <FiActivity /> Activité
+          </button>
+          <button 
+            className={`tab-btn ${activeTab === 'billing' ? 'active' : ''}`}
+            onClick={() => setActiveTab('billing')}
+          >
+            <FiDollarSign /> Facturation
           </button>
         </div>
 
@@ -548,11 +600,11 @@ function AnalyticsPage() {
               </div>
               <div className="summary-card">
                 <div className="summary-icon orange">
-                  <FiTrendingUp />
+                  <FiDollarSign />
                 </div>
                 <div className="summary-info">
-                  <span className="summary-value">-</span>
-                  <span className="summary-label">À compléter</span>
+                  <span className="summary-value">{totalRevenueLabel}</span>
+                  <span className="summary-label">Facturation</span>
                 </div>
               </div>
             </>
@@ -600,6 +652,37 @@ function AnalyticsPage() {
                           name="Activité"
                         />
                       </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Facturation */}
+                  <div className="chart-card large">
+                    <div className="chart-header">
+                      <h3>Facturation</h3>
+                      <p className="chart-subtitle">Montants des actes médicaux (DH) — {periodLabel}</p>
+                    </div>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <BarChart data={revenueTrendData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                        <XAxis dataKey="period" stroke="#9CA3AF" fontSize={12} />
+                        <YAxis stroke="#9CA3AF" fontSize={12} />
+                        <Tooltip
+                          formatter={(value) => [
+                            `${Number(value || 0).toLocaleString('fr-FR', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })} DH`,
+                            'Facturation',
+                          ]}
+                          contentStyle={{
+                            background: '#fff',
+                            border: 'none',
+                            borderRadius: '10px',
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                          }}
+                        />
+                        <Bar dataKey="revenue" fill="#F59E0B" radius={[6, 6, 0, 0]} name="Facturation" />
+                      </BarChart>
                     </ResponsiveContainer>
                   </div>
 
@@ -737,7 +820,7 @@ function AnalyticsPage() {
                 </>
               )}
 
-              {/* Activity Tab: Show activity trend + weekly appointments */}
+              {/* Activity Tab: activity trend + weekly appointments */}
               {activeTab === 'activity' && (
                 <>
                   {/* Activity Trend */}
@@ -793,6 +876,124 @@ function AnalyticsPage() {
                   </div>
                 </>
               )}
+
+              {/* Facturation Tab */}
+              {activeTab === 'billing' && (
+                <>
+                  <div className="chart-card">
+                    <div className="chart-header">
+                      <h3>Synthèse Facturation</h3>
+                      <p className="chart-subtitle">{periodLabel}</p>
+                    </div>
+                    <div className="treatments-list">
+                      <div className="treatment-item">
+                        <div className="treatment-rank">DH</div>
+                        <div className="treatment-info">
+                          <span className="treatment-name">Montant total</span>
+                        </div>
+                        <div className="treatment-stats">
+                          <span className="treatment-count">{fmtMoney(totalRevenue)}</span>
+                        </div>
+                      </div>
+                      <div className="treatment-item">
+                        <div className="treatment-rank">#</div>
+                        <div className="treatment-info">
+                          <span className="treatment-name">Actes facturés</span>
+                        </div>
+                        <div className="treatment-stats">
+                          <span className="treatment-count">{billedActs}</span>
+                        </div>
+                      </div>
+                      <div className="treatment-item">
+                        <div className="treatment-rank">✓</div>
+                        <div className="treatment-info">
+                          <span className="treatment-name">Terminé</span>
+                        </div>
+                        <div className="treatment-stats">
+                          <span className="treatment-count">{fmtMoney(completedRevenue)}</span>
+                        </div>
+                      </div>
+                      <div className="treatment-item">
+                        <div className="treatment-rank">…</div>
+                        <div className="treatment-info">
+                          <span className="treatment-name">En cours</span>
+                        </div>
+                        <div className="treatment-stats">
+                          <span className="treatment-count">{fmtMoney(pendingRevenue)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="chart-card large">
+                    <div className="chart-header">
+                      <h3>Évolution de la Facturation</h3>
+                      <p className="chart-subtitle">Montants des actes médicaux (DH) — {periodLabel}</p>
+                    </div>
+                    {revenueTrendData.length === 0 ? (
+                      <div className="activity-empty-state" style={{ padding: '40px', textAlign: 'center', color: '#64748B' }}>
+                        Aucun montant facturé sur cette période.
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={300}>
+                        <ComposedChart data={revenueTrendData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                          <XAxis dataKey="period" stroke="#9CA3AF" fontSize={12} />
+                          <YAxis stroke="#9CA3AF" fontSize={12} />
+                          <Tooltip
+                            formatter={(value, name) => {
+                              if (name === 'Actes') return [value, 'Actes facturés'];
+                              return [fmtMoney(value), 'Facturation'];
+                            }}
+                            contentStyle={{
+                              background: '#fff',
+                              border: 'none',
+                              borderRadius: '10px',
+                              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                            }}
+                          />
+                          <Bar dataKey="revenue" fill="#FDE68A" barSize={28} name="Montant" radius={[6, 6, 0, 0]} />
+                          <Line type="monotone" dataKey="revenue" stroke="#F59E0B" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} name="Tendance" />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+
+                  <div className="chart-card large">
+                    <div className="chart-header">
+                      <h3>Détail par période</h3>
+                      <p className="chart-subtitle">Montant et nombre d'actes facturés</p>
+                    </div>
+                    {revenueTrendData.length === 0 ? (
+                      <div style={{ padding: '24px', color: '#64748B' }}>Aucune donnée de facturation.</div>
+                    ) : (
+                      <div className="treatments-list">
+                        {revenueTrendData.map((row, index) => {
+                          const maxRevenue = Math.max(...revenueTrendData.map((r) => Number(r.revenue) || 0), 1);
+                          const percentage = Math.round(((Number(row.revenue) || 0) / maxRevenue) * 100);
+                          return (
+                            <div key={`${row.period}-${index}`} className="treatment-item">
+                              <div className="treatment-rank">{index + 1}</div>
+                              <div className="treatment-info">
+                                <span className="treatment-name">{row.period}</span>
+                                <div className="treatment-bar">
+                                  <div className="treatment-progress" style={{ width: `${percentage}%`, background: '#F59E0B' }} />
+                                </div>
+                              </div>
+                              <div className="treatment-stats">
+                                <span className="treatment-count">{fmtMoney(row.revenue)}</span>
+                                <small style={{ display: 'block', color: '#94A3B8' }}>
+                                  {Number(row.acts || 0)} acte{Number(row.acts || 0) === 1 ? '' : 's'}
+                                </small>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
@@ -815,6 +1016,38 @@ function AnalyticsPage() {
             <button className="export-option" onClick={handleExportActivityCSV} disabled={!summary}>
               <FiActivity />
               <span>Activité Détaillée</span>
+              <small>Excel (CSV)</small>
+            </button>
+            <button
+              className="export-option"
+              disabled={!summary}
+              onClick={() => {
+                if (!summary) return;
+                downloadCSV(`RhumatoAI_Facturation_${new Date().toISOString().split('T')[0]}.csv`, [
+                  {
+                    title: `Facturation — ${periodLabel}`,
+                    headers: ['Indicateur', 'Valeur'],
+                    rows: [
+                      ['Montant total (DH)', totalRevenue.toFixed(2)],
+                      ['Actes facturés', billedActs],
+                      ['Terminé (DH)', completedRevenue.toFixed(2)],
+                      ['En cours (DH)', pendingRevenue.toFixed(2)],
+                    ],
+                  },
+                  {
+                    title: 'Détail par période',
+                    headers: ['Période', 'Montant (DH)', 'Actes'],
+                    rows: revenueTrendData.map((r) => [
+                      r.period,
+                      Number(r.revenue || 0).toFixed(2),
+                      r.acts || 0,
+                    ]),
+                  },
+                ]);
+              }}
+            >
+              <FiDollarSign />
+              <span>Facturation</span>
               <small>Excel (CSV)</small>
             </button>
           </div>

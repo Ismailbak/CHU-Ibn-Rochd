@@ -167,6 +167,10 @@ class AnalyticsSummary(BaseModel):
     activity_trends: List[dict]
     revenue_trends: List[dict]
     treatments: List[dict]
+    total_revenue: float = 0
+    billed_acts: int = 0
+    completed_revenue: float = 0
+    pending_revenue: float = 0
 
 
 @router.get("/summary", response_model=AnalyticsSummary)

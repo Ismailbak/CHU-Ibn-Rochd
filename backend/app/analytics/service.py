@@ -71,6 +71,8 @@ def get_summary_stats(db: Session, date_range: str = "6months") -> Dict:
         start_date = today - relativedelta(months=3)
     elif date_range == "1year":
         start_date = today - relativedelta(years=1)
+    elif date_range == "all":
+        start_date = None
     else:  # 6months is default
         start_date = today - relativedelta(months=6)
     
@@ -152,7 +154,10 @@ def get_summary_stats(db: Session, date_range: str = "6months") -> Dict:
     current_month = today.month
     current_year = today.year
     
-    if date_range == "7days" or date_range == "30days":
+    if date_range == "all":
+        num_periods = 0
+        period_type = "all"
+    elif date_range == "7days" or date_range == "30days":
         # Show last 4 weeks
         num_periods = 4
         period_type = "week"
@@ -167,7 +172,46 @@ def get_summary_stats(db: Session, date_range: str = "6months") -> Dict:
     else:  # 6months
         num_periods = 6
         period_type = "month"
-    
+
+    if period_type == "all":
+        # Build trends from actual billed acts (historical data may span years).
+        monthly_rows = (
+            db.query(
+                func.year(MedicalAct.act_date).label("y"),
+                func.month(MedicalAct.act_date).label("m"),
+                func.coalesce(func.sum(MedicalAct.amount), 0),
+                func.count(MedicalAct.id),
+            )
+            .filter(MedicalAct.amount.isnot(None))
+            .filter(MedicalAct.amount > 0)
+            .group_by(func.year(MedicalAct.act_date), func.month(MedicalAct.act_date))
+            .order_by(func.year(MedicalAct.act_date), func.month(MedicalAct.act_date))
+            .all()
+        )
+        if len(monthly_rows) > 24:
+            yearly = {}
+            for y, _m, amount, count in monthly_rows:
+                bucket = yearly.setdefault(int(y), {"revenue": 0.0, "acts": 0})
+                bucket["revenue"] += float(amount or 0)
+                bucket["acts"] += int(count or 0)
+            revenue_trends = [
+                {"period": str(year), "revenue": data["revenue"], "acts": data["acts"]}
+                for year, data in sorted(yearly.items())
+            ]
+        else:
+            revenue_trends = [
+                {
+                    "period": f"{months_fr[int(m) - 1]} {int(y)}",
+                    "revenue": float(amount or 0),
+                    "acts": int(count or 0),
+                }
+                for y, m, amount, count in monthly_rows
+            ]
+
+        # Activity still uses recent months for the overview chart
+        num_periods = 6
+        period_type = "month"
+
     for i in range(num_periods - 1, -1, -1):
         if period_type == "month":
             month_idx = current_month - i
@@ -202,27 +246,49 @@ def get_summary_stats(db: Session, date_range: str = "6months") -> Dict:
             )
         except Exception:
             period_count = 0
-            
-        try:
-            period_revenue = (
-                db.query(func.sum(MedicalAct.amount))
-                .filter(MedicalAct.act_date >= (month_start.date() if period_type == 'month' else week_start_dt.date()),
-                        MedicalAct.act_date <= (month_end.date() if period_type == 'month' else week_end_dt.date()))
-                .scalar() or 0
-            )
-        except Exception:
-            period_revenue = 0
-            
+
         activity_trends.append({"period": period_label, "count": period_count})
-        revenue_trends.append({"period": period_label, "revenue": float(period_revenue)})
+
+        if date_range != "all":
+            try:
+                period_revenue = (
+                    db.query(func.sum(MedicalAct.amount))
+                    .filter(
+                        MedicalAct.act_date >= (month_start.date() if period_type == 'month' else week_start_dt.date()),
+                        MedicalAct.act_date <= (month_end.date() if period_type == 'month' else week_end_dt.date()),
+                    )
+                    .scalar() or 0
+                )
+                period_acts = (
+                    db.query(func.count(MedicalAct.id))
+                    .filter(
+                        MedicalAct.act_date >= (month_start.date() if period_type == 'month' else week_start_dt.date()),
+                        MedicalAct.act_date <= (month_end.date() if period_type == 'month' else week_end_dt.date()),
+                        MedicalAct.amount.isnot(None),
+                        MedicalAct.amount > 0,
+                    )
+                    .scalar() or 0
+                )
+            except Exception:
+                period_revenue = 0
+                period_acts = 0
+            revenue_trends.append({
+                "period": period_label,
+                "revenue": float(period_revenue),
+                "acts": int(period_acts),
+            })
             
     # Treatments summary (top prescribed medications)
     try:
-        top_treatments = (
+        treatment_q = (
             db.query(ActTreatment.drug_name, func.count(ActTreatment.drug_name))
             .join(MedicalAct, MedicalAct.id == ActTreatment.act_id)
-            .filter(MedicalAct.act_date >= start_date)
             .filter(ActTreatment.drug_name.isnot(None))
+        )
+        if start_date is not None:
+            treatment_q = treatment_q.filter(MedicalAct.act_date >= start_date)
+        top_treatments = (
+            treatment_q
             .group_by(ActTreatment.drug_name)
             .order_by(desc(func.count(ActTreatment.drug_name)))
             .limit(10)
@@ -231,6 +297,36 @@ def get_summary_stats(db: Session, date_range: str = "6months") -> Dict:
         treatments = [{"treatment": t[0], "count": t[1]} for t in top_treatments]
     except Exception:
         treatments = []
+
+    # Facturation aggregates for the selected period
+    revenue_q = db.query(func.coalesce(func.sum(MedicalAct.amount), 0)).filter(
+        MedicalAct.amount.isnot(None),
+        MedicalAct.amount > 0,
+    )
+    billed_q = db.query(func.count(MedicalAct.id)).filter(
+        MedicalAct.amount.isnot(None),
+        MedicalAct.amount > 0,
+    )
+    completed_q = db.query(func.coalesce(func.sum(MedicalAct.amount), 0)).filter(
+        MedicalAct.amount.isnot(None),
+        MedicalAct.amount > 0,
+        MedicalAct.status == "completed",
+    )
+    pending_q = db.query(func.coalesce(func.sum(MedicalAct.amount), 0)).filter(
+        MedicalAct.amount.isnot(None),
+        MedicalAct.amount > 0,
+        MedicalAct.status != "completed",
+    )
+    if start_date is not None:
+        revenue_q = revenue_q.filter(MedicalAct.act_date >= start_date)
+        billed_q = billed_q.filter(MedicalAct.act_date >= start_date)
+        completed_q = completed_q.filter(MedicalAct.act_date >= start_date)
+        pending_q = pending_q.filter(MedicalAct.act_date >= start_date)
+
+    total_revenue = float(revenue_q.scalar() or 0)
+    billed_acts = int(billed_q.scalar() or 0)
+    completed_revenue = float(completed_q.scalar() or 0)
+    pending_revenue = float(pending_q.scalar() or 0)
 
     # Final assembled stats
     stats = {
@@ -242,6 +338,10 @@ def get_summary_stats(db: Session, date_range: str = "6months") -> Dict:
         "activity_trends": activity_trends,
         "revenue_trends": revenue_trends,
         "treatments": treatments,
+        "total_revenue": total_revenue,
+        "billed_acts": billed_acts,
+        "completed_revenue": completed_revenue,
+        "pending_revenue": pending_revenue,
     }
 
     return stats

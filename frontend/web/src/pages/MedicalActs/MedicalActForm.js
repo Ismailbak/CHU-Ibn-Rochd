@@ -277,7 +277,11 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit, defaultPatien
         diagnosis: diagnosisValue,
         report: initialData.report || '',
         amount: initialData.amount || '',
-        status: initialData.status || 'pending',
+        status: (() => {
+          const raw = String(initialData.status || '').toLowerCase();
+          if (raw === 'completed' || raw === 'terminé' || raw === 'termine') return 'completed';
+          return 'pending';
+        })(),
         treatment: treatmentValue,
         notes: initialData.notes || '',
         formId: firstForm ? firstForm.form_table_id : '',
@@ -548,7 +552,13 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit, defaultPatien
       // Lab results step is optional
     }
     if (s === 6) {
-      // Treatments step is optional
+      // Amount is optional, but must be a valid positive number when provided
+      if (form.amount !== '' && form.amount !== null && form.amount !== undefined) {
+        const amountValue = Number(form.amount);
+        if (!Number.isFinite(amountValue) || amountValue < 0) {
+          newErrors.amount = 'Le montant doit être un nombre positif';
+        }
+      }
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -1223,6 +1233,58 @@ function MedicalActForm({ onSuccess, onClose, initialData, isEdit, defaultPatien
               treatments={Array.isArray(form.treatment) ? form.treatment : []}
               onChange={(treatment) => setForm((prev) => ({ ...prev, treatment }))}
             />
+
+            {/* Facturation */}
+            <div className="maf-section-title" style={{ marginTop: '8px' }}>
+              <span>Facturation</span>
+            </div>
+            <div className="maf-grid-2">
+              <div className="maf-field">
+                <label className="maf-label">Montant (DH)</label>
+                <input
+                  type="number"
+                  name="amount"
+                  className={`maf-input ${errors.amount ? 'maf-input-error' : ''}`}
+                  placeholder="Ex: 500"
+                  min="0"
+                  step="0.01"
+                  value={form.amount}
+                  onChange={handleChange}
+                />
+                {errors.amount && <span className="maf-error-msg"><FiAlertCircle />{errors.amount}</span>}
+              </div>
+              <div className="maf-field">
+                <label className="maf-label">Statut</label>
+                <div className="maf-category-group">
+                  <label
+                    className={`maf-category-chip ${form.status === 'completed' ? 'selected' : ''}`}
+                  >
+                    <input
+                      type="radio"
+                      name="status"
+                      value="completed"
+                      checked={form.status === 'completed'}
+                      onChange={handleChange}
+                      hidden
+                    />
+                    Terminé
+                  </label>
+                  <label
+                    className={`maf-category-chip ${form.status === 'pending' || form.status === 'in_progress' ? 'selected' : ''}`}
+                  >
+                    <input
+                      type="radio"
+                      name="status"
+                      value="pending"
+                      checked={form.status === 'pending' || form.status === 'in_progress'}
+                      onChange={handleChange}
+                      hidden
+                    />
+                    En cours
+                  </label>
+                </div>
+              </div>
+            </div>
 
             {/* Notes */}
             <div className="maf-field">

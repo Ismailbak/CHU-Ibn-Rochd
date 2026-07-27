@@ -72,7 +72,8 @@ app.include_router(appointments_router, prefix="/api/appointments", tags=["appoi
 app.include_router(medical_acts_router, prefix="/api/medical-acts", tags=["medical-acts"])
 app.include_router(act_results_router, prefix="/api/act-results", tags=["act-results"])
 app.include_router(forms_router, prefix="/api/forms", tags=["forms"])
-app.include_router(chat_router, prefix="/api/chat", tags=["chat"])
+if settings.AI_ASSISTANT_ENABLED:
+    app.include_router(chat_router, prefix="/api/chat", tags=["chat"])
 app.include_router(analytics_router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(notifications_router, prefix="/api/notifications", tags=["notifications"])
 app.include_router(search_router, prefix="/api/search", tags=["search"])
@@ -98,6 +99,10 @@ def on_startup():
                 "Skipping create_all on startup (production). "
                 "Run: alembic upgrade head"
             )
+
+        if not settings.AI_ASSISTANT_ENABLED:
+            log.info("AI Assistant disabled (AI_ASSISTANT_ENABLED=false). Skipping Ollama check.")
+            return
 
         def _check_llm():
             log.info("Checking AI Assistant (Ollama) in background...")
@@ -130,5 +135,9 @@ def health():
     return {
         "status": "ok",
         "environment": settings.APP_ENV,
-        "ai_assistant": "ready" if llm.is_available else "unavailable",
+        "ai_assistant": (
+            ("ready" if llm.is_available else "unavailable")
+            if settings.AI_ASSISTANT_ENABLED
+            else "disabled"
+        ),
     }

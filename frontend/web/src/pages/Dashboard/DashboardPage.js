@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { FiUsers, FiCalendar, FiFileText, FiMessageSquare, FiHeart, FiArrowRight } from 'react-icons/fi';
+import { FiUsers, FiCalendar, FiFileText, FiBell, FiHeart, FiArrowRight } from 'react-icons/fi';
 import Layout from '../../components/layout/Layout';
 import StatCard from '../../components/cards/StatCard';
 import { SkeletonCard, SkeletonChart, SkeletonListItem } from '../../components/common';
-import { getDashboardSummary, getRecentActivity, getUpcomingAppointments } from '../../api/api';
+import { getDashboardSummary, getRecentActivity, getUpcomingAppointments, getNotifications } from '../../api/api';
 import { getWelcomeDisplayName, isAdminWelcome } from '../../utils/userGreeting';
 import './DashboardPage.css';
 
@@ -94,6 +94,7 @@ function DashboardPage() {
     medicalActs: 0,
     diagnosisRecords: 0,
     commonDiagnoses: [],
+    unreadNotifications: 0,
   });
   const [activity, setActivity] = useState([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
@@ -109,12 +110,21 @@ function DashboardPage() {
         const fetchDashboard = getDashboardSummary().then(r => r.data).catch(e => { console.error("Dashboard Summary Load Error:", e); return {}; });
         const fetchRecentActivity = getRecentActivity().then(r => r.data?.activities).catch(e => { console.error("Activity Load Error:", e); return []; });
         const fetchUpcomingAppointments = getUpcomingAppointments(5).then(r => r.data?.appointments).catch(e => { console.error("Upcoming Appointments Load Error:", e); return []; });
+        const fetchNotifications = getNotifications().then(r => r.data).catch(e => { console.error("Notifications Load Error:", e); return []; });
 
-        const [dashboard, remoteActivity, remoteUpcoming] = await Promise.all([
-          fetchDashboard, fetchRecentActivity, fetchUpcomingAppointments
+        const [dashboard, remoteActivity, remoteUpcoming, notifications] = await Promise.all([
+          fetchDashboard, fetchRecentActivity, fetchUpcomingAppointments, fetchNotifications
         ]);
 
         if (cancelled) return;
+
+        const uid = Number(user.id);
+        const unreadNotifications = (notifications || []).filter((n) => {
+          if (n.read) return false;
+          const userId = n.user_id != null ? Number(n.user_id) : null;
+          const senderId = n.sender_id != null ? Number(n.sender_id) : null;
+          return userId === uid && senderId !== uid;
+        }).length;
 
         setStats({
           totalPatients: dashboard?.total_patients || 0,
@@ -126,6 +136,7 @@ function DashboardPage() {
             value: diag.count,
             color: diagnosisColors[i % diagnosisColors.length]
           })),
+          unreadNotifications,
         });
 
         setTrendData(dashboard?.weekly_trend || []);
@@ -145,7 +156,7 @@ function DashboardPage() {
     }
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [user.id]);
 
   return (
     <Layout>
@@ -247,12 +258,12 @@ function DashboardPage() {
                 onClick={() => navigate('/medical-acts')}
               />
               <StatCard
-                icon={<FiMessageSquare />}
-                label="Assistant"
-                percentage="Statut"
-                value="Ready"
+                icon={<FiBell />}
+                label="Notifications"
+                percentage="Non lues"
+                value={`${stats.unreadNotifications} non lue${stats.unreadNotifications === 1 ? '' : 's'}`}
                 color="yellow"
-                onClick={() => navigate('/assistant')}
+                onClick={() => navigate('/notifications')}
               />
               <StatCard
                 icon={<FiHeart />}

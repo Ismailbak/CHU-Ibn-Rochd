@@ -23,6 +23,7 @@ import NotificationsPage from './pages/Notifications';
 import ProfilePage from './pages/Profile';
 import MaintenancePage from './pages/Maintenance';
 import { TermsPage, PrivacyPage } from './pages/Legal';
+import { AI_ASSISTANT_ENABLED } from './config/features';
 
 const DEFAULT_SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes fallback
 const PUBLIC_PATHS = ['/', '/forgot-password', '/terms', '/privacy', '/maintenance'];
@@ -236,10 +237,16 @@ function App() {
         <Route path="/admin/form-builder" element={<AuthRoute adminOnly><FormBuilder /></AuthRoute>} />
         <Route path="/patients" element={<AuthRoute><PatientPage /></AuthRoute>} />
         <Route path="/patients/:id" element={<AuthRoute><PatientDetailPage /></AuthRoute>} />
-        <Route path="/patients/:patientId/chat" element={<AuthRoute><ChatPage /></AuthRoute>} />
+        <Route
+          path="/patients/:patientId/chat"
+          element={AI_ASSISTANT_ENABLED ? <AuthRoute><ChatPage /></AuthRoute> : <Navigate to="/dashboard" replace />}
+        />
         <Route path="/appointments" element={<AuthRoute><AppointmentsPage /></AuthRoute>} />
         <Route path="/medical-acts" element={<AuthRoute><MedicalActsPage /></AuthRoute>} />
-        <Route path="/assistant" element={<AuthRoute><AssistantPage /></AuthRoute>} />
+        <Route
+          path="/assistant"
+          element={AI_ASSISTANT_ENABLED ? <AuthRoute><AssistantPage /></AuthRoute> : <Navigate to="/dashboard" replace />}
+        />
         <Route path="/analytics" element={<AuthRoute><AnalyticsPage /></AuthRoute>} />
         <Route path="/notifications" element={<AuthRoute><NotificationsPage /></AuthRoute>} />
         <Route path="/profile" element={<AuthRoute><ProfilePage /></AuthRoute>} />

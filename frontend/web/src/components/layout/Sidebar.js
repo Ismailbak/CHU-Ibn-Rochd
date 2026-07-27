@@ -4,6 +4,7 @@ import { FiHome, FiUsers, FiCalendar, FiFileText, FiMessageSquare, FiBarChart2, 
 import { useToast } from '../common';
 import ConfirmDialog from '../common/ConfirmDialog';
 import { getNotifications } from '../../api/api';
+import { AI_ASSISTANT_ENABLED } from '../../config/features';
 import logo from '../../assets/images/logo.png';
 import './Sidebar.css';
 
@@ -12,7 +13,9 @@ const navItems = [
   { path: '/patients', icon: FiUsers, label: 'Patients' },
   { path: '/appointments', icon: FiCalendar, label: 'Rendez-vous' },
   { path: '/medical-acts', icon: FiFileText, label: 'Actes Médicaux' },
-  { path: '/assistant', icon: FiMessageSquare, label: 'Assistant IA' },
+  ...(AI_ASSISTANT_ENABLED
+    ? [{ path: '/assistant', icon: FiMessageSquare, label: 'Assistant IA' }]
+    : []),
   { path: '/analytics', icon: FiBarChart2, label: 'Analytics', roles: ['admin', 'doctor', 'department_head'] },
   { path: '/notifications', icon: FiBell, label: 'Notifications' },
 ];

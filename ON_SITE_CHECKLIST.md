@@ -10,16 +10,16 @@ Full steps: [`DEPLOY_MANUAL.md`](DEPLOY_MANUAL.md) · Incidents: [`RUNBOOK.md`](
 
 | Item | Prod value |
 |------|------------|
-| Proxmox UI | `https://____________:8006` |
-| Proxmox SSH (root) | `____________` |
-| DB VM IP (4010) | `____________` |
-| App VM IP (4020) | `____________` |
-| AI VM IP (4030) | `____________` |
+| Proxmox UI | `https://192.168.1.159:8006` |
+| Proxmox SSH (root) | `ismailbak` |
+| vm_dwh (4010) | `____________` |
+| vm_smarthoshealth (4020) | `____________` |
+| vm_mia (4030) | `____________` |
 | Gateway | `____________` |
 | Staff browser URL | `http://____________` |
-| rhumato_app password | ____________ |
-| ia_sync password | ____________ |
-| SECRET_KEY (new) | ____________ |
+| rhumato_app password |deploy123|
+| ia_sync password |deploy123|
+| SECRET_KEY (new) |deploy123|
 | Admin email | ____________ |
 | Admin password | ____________ |
 | Dump filename | `rhumatoai-________.sql` |
@@ -42,7 +42,7 @@ For each VM: Proxmox Create VM → Ubuntu install → static IP → user `ismail
 
 - [ ] **4010** rhumato-db — 2 CPU / 4 GB / 40 GB
 - [ ] **4030** rhumato-ai — 4 CPU / 8 GB / 160 GB (+ GPU if ready)
-- [ ] **4020** rhumato-app — 4 CPU / 8 GB / 40 GB
+- [X] **4020** vm-smarthoshealth — 4 CPU / 8 GB / 40 GB
 - [ ] Expand disk on each: `lvextend` + `resize2fs`
 
 ---

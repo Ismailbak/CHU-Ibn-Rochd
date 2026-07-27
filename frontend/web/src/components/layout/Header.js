@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FiSearch, FiMenu, FiFileText, FiShield, FiX, FiMessageSquare, FiUser, FiCalendar, FiActivity } from 'react-icons/fi';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { globalSearch } from '../../api/api';
+import { AI_ASSISTANT_ENABLED } from '../../config/features';
 import './Header.css';
 
 const navTabs = [
@@ -235,7 +236,7 @@ function Header() {
           </NavLink>
         ))}
         
-        {isDashboard && (
+        {isDashboard && AI_ASSISTANT_ENABLED && (
           <button 
             className="ai-assistant-btn"
             onClick={() => navigate('/assistant')}

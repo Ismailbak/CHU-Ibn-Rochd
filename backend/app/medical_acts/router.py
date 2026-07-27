@@ -11,7 +11,7 @@ from decimal import Decimal
 import os
 import shutil
 import uuid
-from sqlalchemy import String, cast, or_
+from sqlalchemy import String, cast, or_, func
 from sqlalchemy.orm import Session, joinedload  # joinedload used to avoid N+1 queries
 
 from app.core.schemas.mojibake_safe import MojibakeSafeBase
@@ -134,6 +134,9 @@ class MedicalActBase(MojibakeSafeBase):
             return None
         if isinstance(v, Decimal):
             return float(v)
+        # An unpriced act arrives as an empty string from the web form
+        if isinstance(v, str) and not v.strip():
+            return None
         return v
 
 
@@ -333,11 +336,13 @@ def get_medical_acts_stats(
     consultations = db.query(MedicalActModel).filter(MedicalActModel.act_type == "Consultation").count()
     interventions = db.query(MedicalActModel).filter(MedicalActModel.act_type == "Intervention").count()
     treated_patients = db.query(MedicalActModel.patient_id).distinct().count()
+    total_amount = db.query(func.sum(MedicalActModel.amount)).scalar() or 0
     return {
         "total": total,
         "consultations": consultations,
         "interventions": interventions,
         "treatedPatients": treated_patients,
+        "totalAmount": float(total_amount),
     }
 
 
