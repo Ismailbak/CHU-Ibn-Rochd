@@ -40,11 +40,11 @@ function ForgotPasswordPage() {
         <div className="branding-content">
           <div className="brand-logo">
             <FiActivity />
-            <span>RhumatoAI</span>
+            <span>Smart HosHealth</span>
           </div>
           <h1>Récupération de compte</h1>
           <p>
-            RhumatoAI est hébergé en local au sein de l&apos;établissement. La réinitialisation du mot de
+            Smart HosHealth est hébergé en local au sein de l&apos;établissement. La réinitialisation du mot de
             passe est assurée par l&apos;administration, après vérification de votre identité.
           </p>
           <div className="brand-features">
@@ -65,7 +65,7 @@ function ForgotPasswordPage() {
           </div>
         </div>
         <div className="branding-footer">
-          <p>© 2026 RhumatoAI - Tous droits réservés</p>
+          <p>© 2026 Smart HosHealth - Tous droits réservés</p>
         </div>
       </div>
 
@@ -98,7 +98,7 @@ function ForgotPasswordPage() {
                 <h3>Étapes suivantes</h3>
                 <ol>
                   <li>
-                    <FiUser /> Un administrateur RhumatoAI traitera votre demande (délai
+                    <FiUser /> Un administrateur Smart HosHealth traitera votre demande (délai
                     habituel : sous 24 h ouvrées).
                   </li>
                   <li>

@@ -1,5 +1,5 @@
 """
-Copy clinical tables from primary (rhumatoai) to secondary (rhumatoai_sec).
+Copy clinical tables from primary (smarthos) to secondary (smarthos_sec).
 
 The app writes only to primary. RAG reads only from secondary after sync.
 """

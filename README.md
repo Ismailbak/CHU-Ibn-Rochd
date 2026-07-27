@@ -1,6 +1,6 @@
-# RhumatoAI
+# Smart HosHealth
 
-RhumatoAI is a local-first medical assistant for rheumatology workflows. It combines a FastAPI backend, a React web app, an Expo React Native mobile app, MySQL persistence, and an optional local LLM through Ollama.
+Smart HosHealth is a local-first medical assistant for rheumatology workflows. It combines a FastAPI backend, a React web app, an Expo React Native mobile app, MySQL persistence, and an optional local LLM through Ollama.
 
 This README intentionally avoids unverified usage, latency, doctor-count, and load-testing claims. Add performance numbers only after running and documenting reproducible benchmarks for the target machine and dataset.
 

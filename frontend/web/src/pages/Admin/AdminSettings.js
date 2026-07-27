@@ -133,7 +133,7 @@ function AdminSettings() {
                   <label className="settings-field-label">Nom de la plateforme</label>
                   <input
                     className="settings-field-input"
-                    value="RhumatoAI"
+                    value="Smart HosHealth"
                     readOnly
                     disabled
                     title="Le nom de la plateforme ne peut pas être modifié"

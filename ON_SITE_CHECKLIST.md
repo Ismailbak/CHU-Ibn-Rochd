@@ -1,4 +1,4 @@
-# RhumatoAI — On-Site Production Checklist
+# Smart HosHealth — On-Site Production Checklist
 
 Print or open on your phone. Fill in **Prod values** on arrival, then work top to bottom.
 
@@ -22,7 +22,7 @@ Full steps: [`DEPLOY_MANUAL.md`](DEPLOY_MANUAL.md) · Incidents: [`RUNBOOK.md`](
 | SECRET_KEY (new) |deploy123|
 | Admin email | ____________ |
 | Admin password | ____________ |
-| Dump filename | `rhumatoai-________.sql` |
+| Dump filename | `smarthos-________.sql` |
 
 ---
 
@@ -51,25 +51,25 @@ For each VM: Proxmox Create VM → Ubuntu install → static IP → user `ismail
 
 **Create dump** (if not brought from PC — on test/source DB):
 ```bash
-mysqldump -h SOURCE_IP -u rhumato_app -p --single-transaction rhumatoai -r /tmp/rhumatoai-DATE.sql
+mysqldump -h SOURCE_IP -u rhumato_app -p --single-transaction smarthos -r /tmp/smarthos-DATE.sql
 ```
 
 **PC → Proxmox → DB VM:**
 ```powershell
 # On PC
-scp D:\backups\rhumatoai-DATE.sql root@PROXMOX_IP:/tmp/
+scp D:\backups\smarthos-DATE.sql root@PROXMOX_IP:/tmp/
 ```
 ```bash
 # On Proxmox
-scp /tmp/rhumatoai-DATE.sql ismailbak@PROD_DB_IP:/tmp/
+scp /tmp/smarthos-DATE.sql ismailbak@PROD_DB_IP:/tmp/
 ```
 
 **On 4010:**
 - [ ] MySQL installed, `bind-address = 0.0.0.0`, port 3306 open
-- [ ] Databases `rhumatoai` + `rhumatoai_sec` created
+- [ ] Databases `smarthos` + `smarthos_sec` created
 - [ ] Users `rhumato_app@PROD_APP_IP` + `ia_sync@PROD_APP_IP` created
-- [ ] `file /tmp/rhumatoai-*.sql` → UTF-8/ASCII (not UTF-16)
-- [ ] Import: `sudo mysql rhumatoai < /tmp/rhumatoai-DATE.sql`
+- [ ] `file /tmp/smarthos-*.sql` → UTF-8/ASCII (not UTF-16)
+- [ ] Import: `sudo mysql smarthos < /tmp/smarthos-DATE.sql`
 - [ ] Verify: `SELECT COUNT(*) FROM patients;` + admin user exists
 - [ ] Snapshot: `4010-db-imported`
 
@@ -88,15 +88,15 @@ scp /tmp/rhumatoai-DATE.sql ismailbak@PROD_DB_IP:/tmp/
 ## Phase E — App VM (4020)
 
 - [ ] `apt install` python3-venv nginx mysql-client git nodejs
-- [ ] `git clone` → `/opt/ia-medical`
+- [ ] `git clone` → `/opt/smarthos`
 - [ ] `pip install -r requirements.txt` + `bcrypt==4.0.1`
-- [ ] `/etc/ia-medical/env` written (600 perms) — **new SECRET_KEY**
+- [ ] `/etc/smarthos/env` written (600 perms) — **new SECRET_KEY**
 - [ ] `nc -vz PROD_DB_IP 3306` OK
 - [ ] `nc -vz PROD_AI_IP 11434` OK
-- [ ] **Load env:** `set -a && source /etc/ia-medical/env && set +a`
+- [ ] **Load env:** `set -a && source /etc/smarthos/env && set +a`
 - [ ] `alembic upgrade head`
 - [ ] `npm ci && REACT_APP_API_URL=/api npm run build`
-- [ ] `ia-medical.service` + nginx configured
+- [ ] `smarthos.service` + nginx configured
 - [ ] `curl http://127.0.0.1:8000/health` → ok + ai_assistant ready
 - [ ] Snapshot: `4020-app-running`
 
@@ -108,8 +108,8 @@ scp /tmp/rhumatoai-DATE.sql ismailbak@PROD_DB_IP:/tmp/
 - [ ] Staff URL opens login page in browser
 - [ ] RAG sync:
   ```bash
-  set -a && source /etc/ia-medical/env && set +a
-  cd /opt/ia-medical/backend && source .venv/bin/activate
+  set -a && source /etc/smarthos/env && set +a
+  cd /opt/smarthos/backend && source .venv/bin/activate
   python -m scripts.sync_rag_database --init-schema
   python -m scripts.sync_rag_database
   ```
@@ -122,7 +122,7 @@ scp /tmp/rhumatoai-DATE.sql ismailbak@PROD_DB_IP:/tmp/
 
 **Server:**
 ```bash
-bash /opt/ia-medical/scripts/golden_path_vm.sh http://127.0.0.1:8000 'ADMIN_EMAIL' 'ADMIN_PASSWORD'
+bash /opt/smarthos/scripts/golden_path_vm.sh http://127.0.0.1:8000 'ADMIN_EMAIL' 'ADMIN_PASSWORD'
 ```
 - [ ] **17 passed, 0 failed**
 
@@ -150,11 +150,11 @@ bash /opt/ia-medical/scripts/golden_path_vm.sh http://127.0.0.1:8000 'ADMIN_EMAI
 
 | Problem | Fix |
 |---------|-----|
-| Alembic → localhost | `set -a && source /etc/ia-medical/env && set +a` |
+| Alembic → localhost | `set -a && source /etc/smarthos/env && set +a` |
 | Can't scp to VM | PC → Proxmox `/tmp/` → VM |
 | Import garbled | Dump must be UTF-8; use `mysqldump -r` |
 | AI unavailable | 4030 Ollama on `0.0.0.0:11434` |
-| Login 500 | `journalctl -u ia-medical -n 50`; `bcrypt==4.0.1` |
+| Login 500 | `journalctl -u smarthos -n 50`; `bcrypt==4.0.1` |
 
 ---
 

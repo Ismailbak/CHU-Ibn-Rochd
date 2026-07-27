@@ -332,7 +332,7 @@ function Chat({ patientId, currentUser }) {
         role: 'assistant',
         content: res?.data?.response || "Le serveur n'a pas renvoyé de réponse valide.",
         tokens: res?.data?.tokens || res?.data?.metadata?.tokens || 0,
-        model: res?.data?.model || res?.data?.metadata?.model || 'RhumatoAI',
+        model: res?.data?.model || res?.data?.metadata?.model || 'Smart HosHealth',
         sources: res?.data?.sources || [],
         confidence: res?.data?.confidence || 'low',
         warnings: res?.data?.warnings || [],
@@ -484,7 +484,7 @@ function Chat({ patientId, currentUser }) {
           role: 'assistant',
           content: exchange.response,
           tokens: exchange.tokens_used,
-          model: exchange.model_name || 'RhumatoAI',
+          model: exchange.model_name || 'Smart HosHealth',
           timestamp: safeExchangeTimestamp,
         },
       ];
@@ -561,7 +561,7 @@ function Chat({ patientId, currentUser }) {
             <FiActivity />
           </div>
           <div>
-            <strong>RhumatoAI</strong>
+            <strong>Smart HosHealth</strong>
             <span>En ligne</span>
           </div>
           <span className="assistant-status-dot" aria-label="Assistant en ligne" />
@@ -666,7 +666,7 @@ function Chat({ patientId, currentUser }) {
                 <div className="assistant-avatar"><FiActivity /></div>
                 <div className="assistant-bubble">
                   <div className="assistant-message-heading">
-                    <strong>RhumatoAI</strong>
+                    <strong>Smart HosHealth</strong>
                     <span>{formatMessageTime(new Date())}</span>
                   </div>
                   <p className="assistant-message-text">Bonjour {assistantAddressName} ! Je suis votre assistant IA médical. Comment puis-je vous aider aujourd&apos;hui ?</p>
@@ -681,7 +681,7 @@ function Chat({ patientId, currentUser }) {
                 </div>
                 <div className="assistant-bubble">
                   <div className="assistant-message-heading">
-                    <strong>{msg.role === 'user' ? 'Vous' : msg.role === 'error' ? 'Erreur' : 'RhumatoAI'}</strong>
+                    <strong>{msg.role === 'user' ? 'Vous' : msg.role === 'error' ? 'Erreur' : 'Smart HosHealth'}</strong>
                     <span>{formatMessageTime(msg.timestamp)}</span>
                   </div>
                   {msg.role === 'assistant' ? (
@@ -715,7 +715,7 @@ function Chat({ patientId, currentUser }) {
                         locale="fr"
                       />
                       <div className="assistant-message-tools">
-                        <span>{msg.model || 'RhumatoAI'}</span>
+                        <span>{msg.model || 'Smart HosHealth'}</span>
                         {msg.tokens ? <span>{msg.tokens} tokens</span> : null}
                         <button type="button" onClick={() => handleCopyMessage(msg.id, msg.content)}>
                           <FiCopy /> {copiedMessageId === msg.id ? 'Copié' : 'Copier'}
@@ -800,7 +800,7 @@ function Chat({ patientId, currentUser }) {
               {loading ? <FiLoader className="spinning" aria-hidden="true" /> : <FiSend aria-hidden="true" />}
             </button>
           </div>
-          <p><FiZap /> RhumatoAI peut faire des erreurs. Vérifiez les informations importantes.</p>
+          <p><FiZap /> Smart HosHealth peut faire des erreurs. Vérifiez les informations importantes.</p>
         </footer>
       </section>
 

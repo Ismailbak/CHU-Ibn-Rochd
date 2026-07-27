@@ -394,7 +394,7 @@ function AnalyticsPage() {
       doc.setTextColor(255);
       doc.setFont(undefined, 'bold');
       doc.setFontSize(11);
-      doc.text('RhumatoAI', margin, 10.5);
+      doc.text('Smart HosHealth', margin, 10.5);
       doc.setFont(undefined, 'normal');
       doc.setFontSize(8);
       doc.text('Service de Rhumatologie — Rapport statistique', pageWidth - margin, 10.5, { align: 'right' });
@@ -408,7 +408,7 @@ function AnalyticsPage() {
       doc.line(margin, pageHeight - FOOTER_H + 6, pageWidth - margin, pageHeight - FOOTER_H + 6);
       doc.setFontSize(7.5);
       doc.setTextColor(130);
-      doc.text('RhumatoAI — Document confidentiel, usage interne uniquement', margin, pageHeight - 7);
+      doc.text('Smart HosHealth — Document confidentiel, usage interne uniquement', margin, pageHeight - 7);
       doc.text(`Généré le ${generatedAt}`, pageWidth / 2, pageHeight - 7, { align: 'center' });
       doc.text(`Page ${i} / ${pageCount}`, pageWidth - margin, pageHeight - 7, { align: 'right' });
     }
@@ -419,13 +419,13 @@ function AnalyticsPage() {
   const handleExportPDF = () => {
     if (!summary) return;
     const doc = buildPdfReport('Rapport d\'Activité Médicale');
-    doc.save(`RhumatoAI_Rapport_${dateRange}_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`SmartHosHealth_Rapport_${dateRange}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const handleExportMonthlyPDF = () => {
     if (!summary) return;
     const doc = buildPdfReport('Rapport Mensuel d\'Activité');
-    doc.save(`RhumatoAI_Rapport_Mensuel_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`SmartHosHealth_Rapport_Mensuel_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   // CSV with UTF-8 BOM + semicolons so Excel (FR locale) opens it correctly
@@ -448,7 +448,7 @@ function AnalyticsPage() {
 
   const handleExportPatientsCSV = () => {
     if (!summary) return;
-    downloadCSV(`RhumatoAI_Statistiques_Patients_${new Date().toISOString().split('T')[0]}.csv`, [
+    downloadCSV(`SmartHosHealth_Statistiques_Patients_${new Date().toISOString().split('T')[0]}.csv`, [
       {
         title: `Statistiques Patients — ${periodLabel}`,
         headers: ['Indicateur', 'Valeur'],
@@ -473,7 +473,7 @@ function AnalyticsPage() {
 
   const handleExportActivityCSV = () => {
     if (!summary) return;
-    downloadCSV(`RhumatoAI_Activite_Detaillee_${new Date().toISOString().split('T')[0]}.csv`, [
+    downloadCSV(`SmartHosHealth_Activite_Detaillee_${new Date().toISOString().split('T')[0]}.csv`, [
       {
         title: `Tendance d'activité — ${periodLabel}`,
         headers: ['Période', 'Rendez-vous'],
@@ -1023,7 +1023,7 @@ function AnalyticsPage() {
               disabled={!summary}
               onClick={() => {
                 if (!summary) return;
-                downloadCSV(`RhumatoAI_Facturation_${new Date().toISOString().split('T')[0]}.csv`, [
+                downloadCSV(`SmartHosHealth_Facturation_${new Date().toISOString().split('T')[0]}.csv`, [
                   {
                     title: `Facturation — ${periodLabel}`,
                     headers: ['Indicateur', 'Valeur'],

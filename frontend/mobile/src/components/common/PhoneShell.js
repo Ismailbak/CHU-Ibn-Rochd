@@ -21,7 +21,7 @@ export function LogoMark({ size = 58, compact = false }) {
         <Image source={appLogo} style={styles.logoImage} resizeMode="contain" />
       </View>
       <View>
-        <Text style={[styles.logoText, compact && styles.logoTextCompact]}>RHUMATOAI</Text>
+        <Text style={[styles.logoText, compact && styles.logoTextCompact]}>SMARTHOS</Text>
         <Text style={[styles.logoSubtext, compact && styles.logoSubtextCompact]}>
           ASSISTANT MÉDICAL
         </Text>

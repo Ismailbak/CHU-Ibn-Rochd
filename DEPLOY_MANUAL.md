@@ -1,4 +1,4 @@
-# RhumatoAI — Full Day-Of Deployment Manual
+# Smart HosHealth — Full Day-Of Deployment Manual
 
 **Use this document tomorrow.** Follow sections **in order**. Do not skip verification steps.
 
@@ -17,7 +17,7 @@ Related reference (architecture, incidents, gotchas): [`RUNBOOK.md`](RUNBOOK.md)
 
 ### Assets to have ready
 - [ ] Ubuntu ISO on Proxmox `local`: `ubuntu-24.04.4-live-server-amd64.iso`
-- [ ] Latest MySQL dump of primary DB: `rhumatoai-YYYY-MM-DD.sql` (UTF-8, created with `mysqldump -r`)
+- [ ] Latest MySQL dump of primary DB: `smarthos-YYYY-MM-DD.sql` (UTF-8, created with `mysqldump -r`)
 - [ ] Strong `SECRET_KEY` generated (do not reuse the default)
 - [ ] Passwords written down securely:
   - MySQL `rhumato_app` / `ia_sync`
@@ -183,14 +183,14 @@ sudo mysql
 ```
 
 ```sql
-CREATE DATABASE IF NOT EXISTS rhumatoai CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS rhumatoai_sec CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS smarthos CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS smarthos_sec CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE USER IF NOT EXISTS 'rhumato_app'@'192.168.11.20' IDENTIFIED BY 'App123';
-GRANT ALL PRIVILEGES ON rhumatoai.* TO 'rhumato_app'@'192.168.11.20';
+GRANT ALL PRIVILEGES ON smarthos.* TO 'rhumato_app'@'192.168.11.20';
 
 CREATE USER IF NOT EXISTS 'ia_sync'@'192.168.11.20' IDENTIFIED BY 'Sync123';
-GRANT ALL PRIVILEGES ON rhumatoai_sec.* TO 'ia_sync'@'192.168.11.20';
+GRANT ALL PRIVILEGES ON smarthos_sec.* TO 'ia_sync'@'192.168.11.20';
 
 FLUSH PRIVILEGES;
 SHOW DATABASES;
@@ -205,22 +205,22 @@ Copy dump to 4010 (via Proxmox if needed — see RUNBOOK §10), then:
 
 ```bash
 # Example path
-sudo mysql rhumatoai < /tmp/rhumatoai-YYYY-MM-DD.sql
+sudo mysql smarthos < /tmp/smarthos-YYYY-MM-DD.sql
 
 # Verify
-sudo mysql rhumatoai -e "SHOW TABLES;"
-sudo mysql rhumatoai -e "SELECT COUNT(*) AS patients FROM patients;"
-sudo mysql rhumatoai -e "SELECT id, username, email, is_admin, is_active FROM users LIMIT 10;"
+sudo mysql smarthos -e "SHOW TABLES;"
+sudo mysql smarthos -e "SELECT COUNT(*) AS patients FROM patients;"
+sudo mysql smarthos -e "SELECT id, username, email, is_admin, is_active FROM users LIMIT 10;"
 ```
 
-**Do not** import the dump into `rhumatoai_sec` — sync will fill it later.
+**Do not** import the dump into `smarthos_sec` — sync will fill it later.
 
 ### 3.5 DB done checkpoint
 
 - [ ] MySQL active  
 - [ ] Port `0.0.0.0:3306`  
-- [ ] `rhumatoai` has data  
-- [ ] `rhumatoai_sec` empty (or schema only later)  
+- [ ] `smarthos` has data  
+- [ ] `smarthos_sec` empty (or schema only later)  
 - [ ] Snapshot: `db-imported`
 
 ---
@@ -299,9 +299,9 @@ npm -v
 ### 5.2 Clone repository
 
 ```bash
-sudo mkdir -p /opt/ia-medical
-sudo chown ismailbak:ismailbak /opt/ia-medical
-cd /opt/ia-medical
+sudo mkdir -p /opt/smarthos
+sudo chown ismailbak:ismailbak /opt/smarthos
+cd /opt/smarthos
 git clone https://github.com/Ismailbak/Medical-AI-Assitant.git .
 # Or: rsync / copy from USB if offline
 git log -1 --oneline
@@ -310,7 +310,7 @@ git log -1 --oneline
 ### 5.3 Python venv + dependencies
 
 ```bash
-cd /opt/ia-medical/backend
+cd /opt/smarthos/backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
@@ -322,16 +322,16 @@ pip install 'bcrypt==4.0.1'
 ### 5.4 Environment file
 
 ```bash
-sudo mkdir -p /etc/ia-medical
-sudo nano /etc/ia-medical/env
+sudo mkdir -p /etc/smarthos
+sudo nano /etc/smarthos/env
 ```
 
 Paste (adjust secrets/passwords/CORS for the site):
 
 ```bash
 APP_ENV=production
-DATABASE_URL=mysql+pymysql://rhumato_app:App123@192.168.11.10:3306/rhumatoai
-RAG_DATABASE_URL=mysql+pymysql://ia_sync:Sync123@192.168.11.10:3306/rhumatoai_sec
+DATABASE_URL=mysql+pymysql://rhumato_app:App123@192.168.11.10:3306/smarthos
+RAG_DATABASE_URL=mysql+pymysql://ia_sync:Sync123@192.168.11.10:3306/smarthos_sec
 SECRET_KEY=REPLACE_WITH_LONG_RANDOM_SECRET
 CORS_ORIGINS="http://192.168.11.20,http://10.13.19.120,http://10.13.19.111:8080,http://rheuma.local"
 OLLAMA_HOST=http://192.168.11.30:11434
@@ -341,8 +341,8 @@ CREATE_TABLES_ON_STARTUP=false
 ```
 
 ```bash
-sudo chmod 600 /etc/ia-medical/env
-sudo chown root:root /etc/ia-medical/env
+sudo chmod 600 /etc/smarthos/env
+sudo chown root:root /etc/smarthos/env
 ```
 
 ### 5.5 Test DB + Ollama from app VM
@@ -350,16 +350,16 @@ sudo chown root:root /etc/ia-medical/env
 ```bash
 nc -vz 192.168.11.10 3306
 nc -vz 192.168.11.30 11434
-mysql -h 192.168.11.10 -u rhumato_app -pApp123 rhumatoai -e "SELECT 1;"
+mysql -h 192.168.11.10 -u rhumato_app -pApp123 smarthos -e "SELECT 1;"
 curl -s http://192.168.11.30:11434/api/tags | head
 ```
 
 ### 5.6 Migrations (always load env first)
 
 ```bash
-cd /opt/ia-medical/backend
+cd /opt/smarthos/backend
 source .venv/bin/activate
-set -a && source /etc/ia-medical/env && set +a
+set -a && source /etc/smarthos/env && set +a
 echo "$DATABASE_URL"   # must show 192.168.11.10 — NOT localhost
 alembic upgrade head
 ```
@@ -367,16 +367,16 @@ alembic upgrade head
 ### 5.7 Create / reset admin (if needed)
 
 ```bash
-set -a && source /etc/ia-medical/env && set +a
+set -a && source /etc/smarthos/env && set +a
 export ADMIN_PASSWORD='ChooseAStrongPassword'
-cd /opt/ia-medical/backend && source .venv/bin/activate
+cd /opt/smarthos/backend && source .venv/bin/activate
 python scripts/setup_admin.py
 ```
 
 ### 5.8 Build frontend
 
 ```bash
-cd /opt/ia-medical/frontend/web
+cd /opt/smarthos/frontend/web
 rm -rf node_modules build
 npm ci
 REACT_APP_API_URL=/api npm run build
@@ -386,19 +386,19 @@ test -f build/index.html && echo "frontend build: OK"
 ### 5.9 systemd service
 
 ```bash
-sudo nano /etc/systemd/system/ia-medical.service
+sudo nano /etc/systemd/system/smarthos.service
 ```
 
 ```ini
 [Unit]
-Description=IA Medical FastAPI backend
+Description=Smart HosHealth FastAPI backend
 After=network.target
 
 [Service]
 User=ismailbak
-WorkingDirectory=/opt/ia-medical/backend
-EnvironmentFile=/etc/ia-medical/env
-ExecStart=/opt/ia-medical/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 4
+WorkingDirectory=/opt/smarthos/backend
+EnvironmentFile=/etc/smarthos/env
+ExecStart=/opt/smarthos/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 4
 Restart=always
 RestartSec=5
 LimitNOFILE=65536
@@ -409,8 +409,8 @@ WantedBy=multi-user.target
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now ia-medical
-sudo systemctl status ia-medical --no-pager
+sudo systemctl enable --now smarthos
+sudo systemctl status smarthos --no-pager
 curl -s http://127.0.0.1:8000/health; echo
 ```
 
@@ -420,12 +420,12 @@ Expected:
 {"status":"ok","environment":"production","ai_assistant":"ready"}
 ```
 
-If `ai_assistant` is `unavailable`, fix 4030 / `OLLAMA_*` then `sudo systemctl restart ia-medical`.
+If `ai_assistant` is `unavailable`, fix 4030 / `OLLAMA_*` then `sudo systemctl restart smarthos`.
 
 ### 5.10 Nginx on 4020
 
 ```bash
-sudo nano /etc/nginx/sites-available/ia-medical
+sudo nano /etc/nginx/sites-available/smarthos
 ```
 
 ```nginx
@@ -433,7 +433,7 @@ server {
     listen 80;
     server_name rheuma.local 192.168.11.20 10.13.19.120;
 
-    root /opt/ia-medical/frontend/web/build;
+    root /opt/smarthos/frontend/web/build;
     index index.html;
 
     location / { try_files $uri $uri/ /index.html; }
@@ -458,7 +458,7 @@ server {
 ```
 
 ```bash
-sudo ln -sf /etc/nginx/sites-available/ia-medical /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/smarthos /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl enable --now nginx
@@ -547,10 +547,10 @@ From an office PC browser: **`http://10.13.19.111:8080`**
 On **4020**:
 
 ```bash
-mkdir -p /opt/ia-medical/logs
-cd /opt/ia-medical/backend
+mkdir -p /opt/smarthos/logs
+cd /opt/smarthos/backend
 source .venv/bin/activate
-set -a && source /etc/ia-medical/env && set +a
+set -a && source /etc/smarthos/env && set +a
 python -m scripts.sync_rag_database --init-schema
 python -m scripts.sync_rag_database
 ```
@@ -559,10 +559,10 @@ Verify on **4010**:
 
 ```bash
 sudo mysql -e "
-SELECT 'PRIMARY patients' AS label, COUNT(*) AS n FROM rhumatoai.patients
-UNION ALL SELECT 'SECONDARY patients', COUNT(*) FROM rhumatoai_sec.patients
-UNION ALL SELECT 'PRIMARY acts', COUNT(*) FROM rhumatoai.medical_acts
-UNION ALL SELECT 'SECONDARY acts', COUNT(*) FROM rhumatoai_sec.medical_acts;
+SELECT 'PRIMARY patients' AS label, COUNT(*) AS n FROM smarthos.patients
+UNION ALL SELECT 'SECONDARY patients', COUNT(*) FROM smarthos_sec.patients
+UNION ALL SELECT 'PRIMARY acts', COUNT(*) FROM smarthos.medical_acts
+UNION ALL SELECT 'SECONDARY acts', COUNT(*) FROM smarthos_sec.medical_acts;
 "
 ```
 
@@ -575,12 +575,12 @@ crontab -e
 Add **one** line:
 
 ```
-*/10 * * * * set -a && source /etc/ia-medical/env && set +a && cd /opt/ia-medical/backend && .venv/bin/python -m scripts.sync_rag_database >> /opt/ia-medical/logs/rhumato-sync.log 2>&1
+*/10 * * * * set -a && source /etc/smarthos/env && set +a && cd /opt/smarthos/backend && .venv/bin/python -m scripts.sync_rag_database >> /opt/smarthos/logs/smarthos-sync.log 2>&1
 ```
 
 ```bash
 crontab -l | grep sync
-tail -n 20 /opt/ia-medical/logs/rhumato-sync.log
+tail -n 20 /opt/smarthos/logs/smarthos-sync.log
 ```
 
 ---
@@ -592,18 +592,18 @@ tail -n 20 /opt/ia-medical/logs/rhumato-sync.log
 On **4020**:
 
 ```bash
-sudo systemctl is-active ia-medical nginx
+sudo systemctl is-active smarthos nginx
 curl -s http://127.0.0.1:8000/health; echo
-cd /opt/ia-medical && git log -1 --oneline
+cd /opt/smarthos && git log -1 --oneline
 test -f frontend/web/build/index.html && echo "frontend build: OK"
 
-set -a && source /etc/ia-medical/env && set +a
+set -a && source /etc/smarthos/env && set +a
 nc -vz 192.168.11.10 3306
 nc -vz 192.168.11.30 11434
 curl -s http://127.0.0.1:8000/api/analytics/maintenance-status; echo
 curl -s http://127.0.0.1:8000/api/analytics/session-config; echo
 
-bash /opt/ia-medical/scripts/golden_path_vm.sh \
+bash /opt/smarthos/scripts/golden_path_vm.sh \
   http://127.0.0.1:8000 'admin@chu.ma' 'YOUR_REAL_PASSWORD'
 ```
 
@@ -641,19 +641,19 @@ Proxmox snapshots when all green:
 On **4020** only:
 
 ```bash
-cd /opt/ia-medical
+cd /opt/smarthos
 git pull
 
 cd backend
 source .venv/bin/activate
-set -a && source /etc/ia-medical/env && set +a
+set -a && source /etc/smarthos/env && set +a
 alembic upgrade head
 
 cd ../frontend/web
 npm ci
 REACT_APP_API_URL=/api npm run build
 
-sudo systemctl restart ia-medical
+sudo systemctl restart smarthos
 sudo systemctl reload nginx
 curl -s http://127.0.0.1:8000/health; echo
 ```
@@ -661,9 +661,9 @@ curl -s http://127.0.0.1:8000/health; echo
 Optional immediate RAG sync:
 
 ```bash
-cd /opt/ia-medical/backend
+cd /opt/smarthos/backend
 source .venv/bin/activate
-set -a && source /etc/ia-medical/env && set +a
+set -a && source /etc/smarthos/env && set +a
 python -m scripts.sync_rag_database
 ```
 
@@ -673,9 +673,9 @@ python -m scripts.sync_rag_database
 
 | Symptom | First action |
 |---------|----------------|
-| Alembic → `localhost` refused | `set -a && source /etc/ia-medical/env && set +a` then retry |
-| `/health` no AI | Check 4030 `ss -tlnp \| grep 11434`, restart ollama, restart `ia-medical` |
-| Login 500 | `journalctl -u ia-medical -n 50`; pin `bcrypt==4.0.1` |
+| Alembic → `localhost` refused | `set -a && source /etc/smarthos/env && set +a` then retry |
+| `/health` no AI | Check 4030 `ss -tlnp \| grep 11434`, restart ollama, restart `smarthos` |
+| Login 500 | `journalctl -u smarthos -n 50`; pin `bcrypt==4.0.1` |
 | DB refused from 4020 | On 4010: MySQL up + `bind-address = 0.0.0.0` |
 | Browser blank | Rebuild frontend; Ctrl+F5 |
 | Office can't open site | Use `http://10.13.19.111:8080`; check Proxmox nginx |

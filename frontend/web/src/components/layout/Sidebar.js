@@ -104,7 +104,7 @@ function Sidebar() {
         <div className="sidebar-content">
           {/* Logo */}
           <div className="sidebar-logo">
-            <img src={logo} alt="RhumatoAI Logo" className="logo-img" />
+            <img src={logo} alt="Smart HosHealth Logo" className="logo-img" />
           </div>
 
           {/* Navigation */}

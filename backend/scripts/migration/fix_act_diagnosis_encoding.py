@@ -1,7 +1,7 @@
 """
 Fix mojibake in act_diagnoses.diagnosis_label (UTF-8 mis-imported as Latin-1/CP437).
 
-Usage (from backend/ on app VM, with DATABASE_URL pointing at rhumatoai):
+Usage (from backend/ on app VM, with DATABASE_URL pointing at smarthos):
     python -m scripts.migration.fix_act_diagnosis_encoding          # dry-run
     python -m scripts.migration.fix_act_diagnosis_encoding --commit
 """

@@ -1,4 +1,4 @@
-"""Role-based access control helpers for RhumatoAI."""
+"""Role-based access control helpers for Smart HosHealth."""
 
 from fastapi import Depends, HTTPException, status
 

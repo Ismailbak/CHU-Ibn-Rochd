@@ -2,7 +2,7 @@
 Backfill act_diagnoses.diagnosis_label from chuir_source.w104_local_diag.
 
 The initial import used ref_diag (empty); labels were stored as "Non précisé".
-This script updates rhumatoai in place from the legacy lookup table.
+This script updates smarthos in place from the legacy lookup table.
 
 Usage (from backend/):
     python -m scripts.migration.backfill_diagnosis_labels          # dry-run counts

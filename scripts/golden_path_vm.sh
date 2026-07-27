@@ -8,7 +8,7 @@ BASE_URL="${1:-http://127.0.0.1:8000}"
 USER="${2:-admin}"
 PASS="${3:-}"
 
-REPO="/opt/ia-medical"
+REPO="/opt/smarthos"
 PASS_COUNT=0
 FAIL_COUNT=0
 SKIP_COUNT=0
@@ -18,7 +18,7 @@ fail() { echo "[FAIL] $1"; FAIL_COUNT=$((FAIL_COUNT + 1)); }
 skip() { echo "[SKIP] $1"; SKIP_COUNT=$((SKIP_COUNT + 1)); }
 
 echo ""
-echo "=== RhumatoAI Golden Path — VM Smoke Test ==="
+echo "=== Smart HosHealth Golden Path — VM Smoke Test ==="
 echo "Base URL: $BASE_URL"
 echo ""
 
@@ -184,10 +184,10 @@ except Exception:
 fi
 
 # 6. Services
-if systemctl is-active --quiet ia-medical 2>/dev/null; then
-  pass "systemd ia-medical active"
+if systemctl is-active --quiet smarthos 2>/dev/null; then
+  pass "systemd smarthos active"
 else
-  fail "systemd ia-medical not active"
+  fail "systemd smarthos not active"
 fi
 
 if systemctl is-active --quiet nginx 2>/dev/null; then

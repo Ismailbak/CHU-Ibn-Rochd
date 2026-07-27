@@ -1,5 +1,5 @@
 """
-ETL: migrate legacy CHUIR rheumatology data (chuir_source) into the app DB (rhumatoai).
+ETL: migrate legacy CHUIR rheumatology data (chuir_source) into the app DB (smarthos).
 
 PHASE 1 scope: patients <- person, appointments <- rdv, medical_acts <- act
 (+ act_diagnoses <- actdg, act_documents <- actfile). Clinical forms are deferred.
@@ -336,13 +336,13 @@ def migrate_files(src, dst, act_ids: set[int]) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Migrate CHUIR legacy data into rhumatoai.")
+    parser = argparse.ArgumentParser(description="Migrate CHUIR legacy data into smarthos.")
     parser.add_argument("--commit", action="store_true", help="Actually write (default: dry-run).")
     parser.add_argument("--truncate", action="store_true", help="Wipe app-managed tables first.")
     args = parser.parse_args()
 
     mode = "COMMIT" if args.commit else "DRY-RUN"
-    print(f"\n=== CHUIR migration [{mode}] source={SOURCE_DB} -> target=rhumatoai ===\n")
+    print(f"\n=== CHUIR migration [{mode}] source={SOURCE_DB} -> target=smarthos ===\n")
 
     # Source returns raw bytes (we decode UTF-8 ourselves via fix_text). Target is utf8mb4.
     src = connect(SOURCE_DB, raw_bytes=True)
@@ -365,7 +365,7 @@ def main() -> int:
 
         if args.commit:
             dst.commit()
-            print("\n[COMMITTED] Data written to rhumatoai.")
+            print("\n[COMMITTED] Data written to smarthos.")
         else:
             dst.rollback()
             print("\n[ROLLED BACK] Dry-run only — no changes written. Re-run with --commit to apply.")

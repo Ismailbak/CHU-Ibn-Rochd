@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
 """
-Bidirectional clinical sync: hoshealth (legacy) ↔ rhumatoai (primary).
+Bidirectional clinical sync: hoshealth (legacy) ↔ smarthos (primary).
 
-Requires env (typically /etc/ia-medical/env on the app VM):
+Requires env (typically /etc/smarthos/env on the app VM):
   CHUIR_SOURCE_HOST=10.10.10.2
   CHUIR_SOURCE_USER=hoshealth_smart3
   CHUIR_SOURCE_PASSWORD=...
   CHUIR_SOURCE_DB=hoshealth
-  DATABASE_URL=mysql+pymysql://...@10.10.10.5:3306/rhumatoai
+  DATABASE_URL=mysql+pymysql://...@10.10.10.5:3306/smarthos
 
 Usage (from backend/ with venv):
   python -m scripts.sync_hoshealth_bidi           # dry-run (rollback)
   python -m scripts.sync_hoshealth_bidi --commit # apply both sides
 
 Cron (every 10 min, then RAG secondary sync):
-  */10 * * * * set -a && source /etc/ia-medical/env && set +a && \\
-    cd /opt/ia-medical/backend && .venv/bin/python -m scripts.sync_hoshealth_bidi --commit \\
-    >> /opt/ia-medical/logs/hoshealth-bidi.log 2>&1
+  */10 * * * * set -a && source /etc/smarthos/env && set +a && \\
+    cd /opt/smarthos/backend && .venv/bin/python -m scripts.sync_hoshealth_bidi --commit \\
+    >> /opt/smarthos/logs/hoshealth-bidi.log 2>&1
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ from app.sync.hoshealth_bidi import run_bidi_sync
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Bidirectional sync hoshealth ↔ rhumatoai (last-write-wins)"
+        description="Bidirectional sync hoshealth ↔ smarthos (last-write-wins)"
     )
     parser.add_argument(
         "--commit",

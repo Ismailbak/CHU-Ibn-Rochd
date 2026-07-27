@@ -10,9 +10,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     # Database: mysql+pymysql://USER:PASSWORD@HOST:3306/DATABASE
-    DATABASE_URL: str = "mysql+pymysql://root:@localhost:3306/rhumatoai"
+    DATABASE_URL: str = "mysql+pymysql://root:@localhost:3306/smarthos"
 
-    # Secondary DB for RAG reads (rhumatoai_sec). When set, assistant retrieval
+    # Secondary DB for RAG reads (smarthos_sec). When set, assistant retrieval
     # uses this database instead of DATABASE_URL.
     RAG_DATABASE_URL: str | None = None
 

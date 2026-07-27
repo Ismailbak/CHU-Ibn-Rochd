@@ -9,7 +9,7 @@ from typing import Any, Dict
 SETTINGS_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "platform_settings.json")
 
 DEFAULT_SETTINGS: Dict[str, Any] = {
-    "platformName": "RhumatoAI",
+    "platformName": "Smart HosHealth",
     "notifications": True,
     "maintenanceMode": False,
     "emailAlerts": True,

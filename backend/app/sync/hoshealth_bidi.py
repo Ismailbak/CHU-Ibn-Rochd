@@ -1,5 +1,5 @@
 """
-Bidirectional clinical sync: legacy hoshealth ↔ app rhumatoai.
+Bidirectional clinical sync: legacy hoshealth ↔ app smarthos.
 
 Conflict policy: last-write-wins (compare timestamps; if both sides changed
 since last sync and timestamps tie, prefer hoshealth).

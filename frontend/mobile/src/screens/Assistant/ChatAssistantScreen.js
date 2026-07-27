@@ -95,7 +95,7 @@ export default function ChatAssistantScreen({ navigation, route }) {
           retrievalType: res.data?.retrieval_type || 'none',
           patientName: res.data?.patient_name || null,
           tokens: res.data?.tokens || 0,
-          model: res.data?.model || 'RhumatoAI',
+          model: res.data?.model || 'Smart HosHealth',
         },
       ]);
     } catch (error) {
@@ -139,7 +139,7 @@ export default function ChatAssistantScreen({ navigation, route }) {
 
   const listData = messages.length > 0 ? messages : [
     { id: 'time', role: 'system', text: '09:41 AM' },
-    { id: 'hello', role: 'assistant', text: 'Bonjour, je suis votre assistant RhumatoAI. Posez-moi une question clinique ou demandez un résumé patient.' },
+    { id: 'hello', role: 'assistant', text: 'Bonjour, je suis votre assistant Smart HosHealth. Posez-moi une question clinique ou demandez un résumé patient.' },
   ];
 
   return (
@@ -160,7 +160,7 @@ export default function ChatAssistantScreen({ navigation, route }) {
           </TouchableOpacity>
           <View style={styles.assistantAvatar}><Text style={styles.assistantAvatarText}>AI</Text></View>
           <View style={styles.headerCopy}>
-            <Text style={styles.headerName}>Assistant RhumatoAI</Text>
+            <Text style={styles.headerName}>Assistant Smart HosHealth</Text>
             <Text style={styles.headerRole}>{loading ? 'Réponse en cours...' : 'Réponses médicales contextualisées'}</Text>
           </View>
           <TouchableOpacity

@@ -1,6 +1,6 @@
-# RhumatoAI — On-Prem Operations Runbook
+# Smart HosHealth — On-Prem Operations Runbook
 
-Complete reference for the **3-VM RhumatoAI deployment** on Proxmox (test site).
+Complete reference for the **3-VM Smart HosHealth deployment** on Proxmox (test site).
 Covers architecture, every VM, the deployment process, day-to-day commands, a user
 guide, and **what to do when things break**.
 
@@ -28,28 +28,28 @@ guide, and **what to do when things break**.
    │ 4010 rhumato-db│◄────│ 4020 rhumato-app             │─────►│ 4030 rhumato-ai         │
    │ 192.168.11.10  │ SQL │ 192.168.11.20 (enp6s18)      │ HTTP │ 192.168.11.30           │
    │ MySQL 8        │     │ 10.13.19.120  (enp6s19 2nd)  │11434 │ Ollama + RTX 3060       │
-   │ rhumatoai      │     │ Nginx + FastAPI + React      │      │ model: gemma4:e4b       │
-   │ rhumatoai_sec  │     │ cron: sync every 10 min      │      │ systemd: ollama         │
+   │ smarthos      │     │ Nginx + FastAPI + React      │      │ model: gemma4:e4b       │
+   │ smarthos_sec  │     │ cron: sync every 10 min      │      │ systemd: ollama         │
    └───────────────┘      └────────────────────────────┘      └────────────────────────┘
 ```
 
 **Data flow (primary / secondary — live on test site):**
 
 ```text
-Doctors / App (4020)  ──read/write──►  rhumatoai (PRIMARY, source of truth)
+Doctors / App (4020)  ──read/write──►  smarthos (PRIMARY, source of truth)
                                               │
                               sync job (4020, every 10 min)
                               python -m scripts.sync_rag_database
                                               │
                                               ▼
-Assistant RAG (4020)  ──read only──►  rhumatoai_sec (SECONDARY, AI copy)
+Assistant RAG (4020)  ──read only──►  smarthos_sec (SECONDARY, AI copy)
                                               │
                                               ▼
                               Ollama (4030) generates answer text (no DB access)
 ```
 
-- **Primary** (`rhumatoai`): patients, RDV, actes, users, chat, audit — app CRUD only.
-- **Secondary** (`rhumatoai_sec`): copy of clinical tables for RAG — assistant never reads primary when `RAG_DATABASE_URL` is set.
+- **Primary** (`smarthos`): patients, RDV, actes, users, chat, audit — app CRUD only.
+- **Secondary** (`smarthos_sec`): copy of clinical tables for RAG — assistant never reads primary when `RAG_DATABASE_URL` is set.
 - **Sync**: app VM reads primary with `rhumato_app`, writes secondary with `ia_sync`.
 
 **Two networks meet at the Proxmox host:**
@@ -85,7 +85,7 @@ VM **4020** also has a **second NIC** on `10.13.19.120` for direct access if rou
 | IP | `192.168.11.10/24` |
 | vCPU / RAM / Disk | 2 / 4 GB / 40 GB |
 | Service | MySQL 8 (`systemctl … mysql`) |
-| Databases | `rhumatoai` (primary), `rhumatoai_sec` (secondary — AI/RAG copy) |
+| Databases | `smarthos` (primary), `smarthos_sec` (secondary — AI/RAG copy) |
 | App DB user | `rhumato_app@192.168.11.20` / password `App123` — read/write **primary only** |
 | Sync DB user | `ia_sync@192.168.11.20` / password `Sync123` — read/write **secondary only** |
 | Bind address | `0.0.0.0` (in `/etc/mysql/mysql.conf.d/mysqld.cnf`) |
@@ -98,12 +98,12 @@ VM **4020** also has a **second NIC** on `10.13.19.120` for direct access if rou
 | IP (internal) | `192.168.11.20/24` — `enp6s18` (DB + AI traffic, default gateway) |
 | IP (office)   | `10.13.19.120/24` — `enp6s19` (2nd NIC, no gateway) |
 | vCPU / RAM / Disk | 4 / 8 GB / 40 GB (root LVM expanded to full disk) |
-| App code | `/opt/ia-medical` (`backend/`, `frontend/web/build`) |
-| Python venv | `/opt/ia-medical/backend/.venv` |
-| Env file | `/etc/ia-medical/env` (mode 600) |
-| Sync log | `/opt/ia-medical/logs/rhumato-sync.log` |
-| Backend service | `ia-medical` (systemd) → uvicorn on `127.0.0.1:8000` |
-| Web server | Nginx → `/etc/nginx/sites-available/ia-medical` |
+| App code | `/opt/smarthos` (`backend/`, `frontend/web/build`) |
+| Python venv | `/opt/smarthos/backend/.venv` |
+| Env file | `/etc/smarthos/env` (mode 600) |
+| Sync log | `/opt/smarthos/logs/smarthos-sync.log` |
+| Backend service | `smarthos` (systemd) → uvicorn on `127.0.0.1:8000` |
+| Web server | Nginx → `/etc/nginx/sites-available/smarthos` |
 | Serves | React build on port 80, proxies `/api/`, `/uploads/`, `/health` |
 
 ### VM 4030 — `rhumato-ai` (LLM)
@@ -130,12 +130,12 @@ VM **4020** also has a **second NIC** on `10.13.19.120` for direct access if rou
 
 ## 3. Configuration files (reference)
 
-### `/etc/ia-medical/env` (on 4020)
+### `/etc/smarthos/env` (on 4020)
 
 ```bash
 APP_ENV=production
-DATABASE_URL=mysql+pymysql://rhumato_app:App123@192.168.11.10:3306/rhumatoai
-RAG_DATABASE_URL=mysql+pymysql://ia_sync:Sync123@192.168.11.10:3306/rhumatoai_sec
+DATABASE_URL=mysql+pymysql://rhumato_app:App123@192.168.11.10:3306/smarthos
+RAG_DATABASE_URL=mysql+pymysql://ia_sync:Sync123@192.168.11.10:3306/smarthos_sec
 SECRET_KEY=<long-random-secret>
 CORS_ORIGINS="http://192.168.11.20,http://10.13.19.120,http://10.13.19.111:8080,http://rheuma.local"
 OLLAMA_HOST=http://192.168.11.30:11434
@@ -144,18 +144,18 @@ RAG_SEMANTIC_ENABLED=false
 CREATE_TABLES_ON_STARTUP=false
 ```
 
-### `/etc/systemd/system/ia-medical.service` (on 4020)
+### `/etc/systemd/system/smarthos.service` (on 4020)
 
 ```ini
 [Unit]
-Description=IA Medical FastAPI backend
+Description=Smart HosHealth FastAPI backend
 After=network.target
 
 [Service]
 User=ismailbak
-WorkingDirectory=/opt/ia-medical/backend
-EnvironmentFile=/etc/ia-medical/env
-ExecStart=/opt/ia-medical/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 4
+WorkingDirectory=/opt/smarthos/backend
+EnvironmentFile=/etc/smarthos/env
+ExecStart=/opt/smarthos/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 4
 Restart=always
 RestartSec=5
 LimitNOFILE=65536
@@ -164,14 +164,14 @@ LimitNOFILE=65536
 WantedBy=multi-user.target
 ```
 
-### `/etc/nginx/sites-available/ia-medical` (on 4020)
+### `/etc/nginx/sites-available/smarthos` (on 4020)
 
 ```nginx
 server {
     listen 80;
     server_name rheuma.local 192.168.11.20 10.13.19.120;
 
-    root /opt/ia-medical/frontend/web/build;
+    root /opt/smarthos/frontend/web/build;
     index index.html;
 
     location / { try_files $uri $uri/ /index.html; }
@@ -292,16 +292,16 @@ Order: **DB → App → AI**.
 1. **Create 3 VMs** in Proxmox (Ubuntu 24.04, static IPs, `ismailbak` user, OpenSSH).
 2. **4010 DB:**
    - Install MySQL 8, set `bind-address = 0.0.0.0`, open port 3306.
-   - Create `rhumatoai` + `rhumatoai_sec`.
-   - Create `rhumato_app@192.168.11.20` (ALL on `rhumatoai.*`).
-   - Create `ia_sync@192.168.11.20` (ALL on `rhumatoai_sec.*` only).
-   - Import existing dump into **primary only** (`mysql rhumatoai < dump.sql`).
+   - Create `smarthos` + `smarthos_sec`.
+   - Create `rhumato_app@192.168.11.20` (ALL on `smarthos.*`).
+   - Create `ia_sync@192.168.11.20` (ALL on `smarthos_sec.*` only).
+   - Import existing dump into **primary only** (`mysql smarthos < dump.sql`).
 3. **4020 App:**
    - Install `python3-venv`, `nginx`, Node.js, `mysql-client`.
-   - Copy repo to `/opt/ia-medical`; `python -m venv .venv`; `pip install -r requirements.txt`.
-   - Write `/etc/ia-medical/env` (include `RAG_DATABASE_URL`); run `alembic upgrade head`.
+   - Copy repo to `/opt/smarthos`; `python -m venv .venv`; `pip install -r requirements.txt`.
+   - Write `/etc/smarthos/env` (include `RAG_DATABASE_URL`); run `alembic upgrade head`.
    - `npm ci && REACT_APP_API_URL=/api npm run build` in `frontend/web`.
-   - Create `ia-medical.service`; configure Nginx; open port 80.
+   - Create `smarthos.service`; configure Nginx; open port 80.
    - Add **2nd NIC** (`10.13.19.120`) via netplan for office access.
    - **Enable secondary DB sync:** `python -m scripts.sync_rag_database --init-schema`, then cron (§6).
 4. **4030 AI:**
@@ -322,7 +322,7 @@ Full step-by-step is in [`deploy.md`](deploy.md).
 # App (run on 4020)
 curl -s http://127.0.0.1:8000/health          # direct backend
 curl -s http://127.0.0.1/health               # via local nginx
-sudo systemctl status ia-medical nginx
+sudo systemctl status smarthos nginx
 
 # From Proxmox host
 curl -s http://127.0.0.1:8080/health          # via reverse proxy
@@ -341,7 +341,7 @@ ss -tlnp | grep 3306                           # should show 0.0.0.0:3306
 
 ```bash
 # 4020
-sudo systemctl restart ia-medical
+sudo systemctl restart smarthos
 sudo systemctl reload nginx        # after nginx config change (test first!)
 sudo nginx -t                      # validate nginx config
 
@@ -359,8 +359,8 @@ systemctl reload nginx
 
 ```bash
 # App backend (most useful for 500 errors / crashes)
-sudo journalctl -u ia-medical -n 50 --no-pager
-sudo journalctl -u ia-medical -f            # live follow
+sudo journalctl -u smarthos -n 50 --no-pager
+sudo journalctl -u smarthos -f            # live follow
 
 # Ollama
 sudo journalctl -u ollama -n 50 --no-pager
@@ -376,14 +376,14 @@ sudo tail -n 50 /var/log/nginx/error.log
 
 ```bash
 # Connect from app VM (4020)
-mysql -h 192.168.11.10 -u rhumato_app -pApp123 rhumatoai
+mysql -h 192.168.11.10 -u rhumato_app -pApp123 smarthos
 
 # List users
-mysql -h 192.168.11.10 -u rhumato_app -pApp123 rhumatoai \
+mysql -h 192.168.11.10 -u rhumato_app -pApp123 smarthos \
   -e "SELECT id, username, email, is_active, is_admin FROM users;"
 
 # On DB VM directly
-sudo mysql rhumatoai -e "SHOW TABLES;"
+sudo mysql smarthos -e "SHOW TABLES;"
 ```
 
 ### Ollama models
@@ -398,15 +398,15 @@ ollama run gemma4:e4b "Bonjour"    # quick test
 ### Environment / migrations (on 4020)
 
 ```bash
-set -a && source /etc/ia-medical/env && set +a
-cd /opt/ia-medical/backend && source .venv/bin/activate
+set -a && source /etc/smarthos/env && set +a
+cd /opt/smarthos/backend && source .venv/bin/activate
 alembic upgrade head               # apply DB migrations
 python scripts/setup_admin.py      # (re)create admin — needs ADMIN_PASSWORD
 ```
 
-### Secondary DB sync (primary → rhumatoai_sec for RAG)
+### Secondary DB sync (primary → smarthos_sec for RAG)
 
-The app **writes only** to `rhumatoai`. The assistant **reads** from `rhumatoai_sec` when `RAG_DATABASE_URL` is set.
+The app **writes only** to `smarthos`. The assistant **reads** from `smarthos_sec` when `RAG_DATABASE_URL` is set.
 
 #### Create sync user (4010, once)
 
@@ -416,7 +416,7 @@ sudo mysql
 
 ```sql
 CREATE USER IF NOT EXISTS 'ia_sync'@'192.168.11.20' IDENTIFIED BY 'Sync123';
-GRANT ALL ON rhumatoai_sec.* TO 'ia_sync'@'192.168.11.20';
+GRANT ALL ON smarthos_sec.* TO 'ia_sync'@'192.168.11.20';
 FLUSH PRIVILEGES;
 EXIT;
 ```
@@ -424,31 +424,31 @@ EXIT;
 #### First-time sync (4020, env loaded)
 
 ```bash
-mkdir -p /opt/ia-medical/logs
-set -a && source /etc/ia-medical/env && set +a
-cd /opt/ia-medical/backend && source .venv/bin/activate
+mkdir -p /opt/smarthos/logs
+set -a && source /etc/smarthos/env && set +a
+cd /opt/smarthos/backend && source .venv/bin/activate
 python -m scripts.sync_rag_database --init-schema
 python -m scripts.sync_rag_database
 ```
 
-Run from **`/opt/ia-medical/backend`** using `-m` (not `python scripts/...` alone — needs `app` on path).
+Run from **`/opt/smarthos/backend`** using `-m` (not `python scripts/...` alone — needs `app` on path).
 
 #### Verify counts match (4010)
 
 ```bash
 sudo mysql -e "
-SELECT 'PRIMARY patients' AS label, COUNT(*) AS n FROM rhumatoai.patients
-UNION ALL SELECT 'SECONDARY patients', COUNT(*) FROM rhumatoai_sec.patients
-UNION ALL SELECT 'PRIMARY acts', COUNT(*) FROM rhumatoai.medical_acts
-UNION ALL SELECT 'SECONDARY acts', COUNT(*) FROM rhumatoai_sec.medical_acts;
+SELECT 'PRIMARY patients' AS label, COUNT(*) AS n FROM smarthos.patients
+UNION ALL SELECT 'SECONDARY patients', COUNT(*) FROM smarthos_sec.patients
+UNION ALL SELECT 'PRIMARY acts', COUNT(*) FROM smarthos.medical_acts
+UNION ALL SELECT 'SECONDARY acts', COUNT(*) FROM smarthos_sec.medical_acts;
 "
 ```
 
 Compare one patient in each DB separately (avoid UNION collation errors):
 
 ```bash
-sudo mysql rhumatoai -e "SELECT ipp, first_name, last_name FROM patients WHERE ipp='2026-0042';"
-sudo mysql rhumatoai_sec -e "SELECT ipp, first_name, last_name FROM patients WHERE ipp='2026-0042';"
+sudo mysql smarthos -e "SELECT ipp, first_name, last_name FROM patients WHERE ipp='2026-0042';"
+sudo mysql smarthos_sec -e "SELECT ipp, first_name, last_name FROM patients WHERE ipp='2026-0042';"
 ```
 
 #### Cron (4020 — auto sync every 10 min)
@@ -460,17 +460,17 @@ crontab -e
 Choose editor **1** (nano). Add **one line only**:
 
 ```
-*/10 * * * * set -a && source /etc/ia-medical/env && set +a && cd /opt/ia-medical/backend && .venv/bin/python -m scripts.sync_rag_database >> /opt/ia-medical/logs/rhumato-sync.log 2>&1
+*/10 * * * * set -a && source /etc/smarthos/env && set +a && cd /opt/smarthos/backend && .venv/bin/python -m scripts.sync_rag_database >> /opt/smarthos/logs/smarthos-sync.log 2>&1
 ```
 
 Verify: `crontab -l | grep sync`
 
-**Do not** log to `/var/log/` — `ismailbak` lacks write permission. Use `/opt/ia-medical/logs/`.
+**Do not** log to `/var/log/` — `ismailbak` lacks write permission. Use `/opt/smarthos/logs/`.
 
 Watch log:
 
 ```bash
-tail -f /opt/ia-medical/logs/rhumato-sync.log
+tail -f /opt/smarthos/logs/smarthos-sync.log
 ```
 
 #### Tables synced
@@ -482,9 +482,9 @@ Not synced: chat, audit, forms (app-only on primary).
 #### Deploy code updates (4020)
 
 ```bash
-cd /opt/ia-medical && git pull
+cd /opt/smarthos && git pull
 cd frontend/web && npm run build          # if frontend changed
-sudo systemctl restart ia-medical
+sudo systemctl restart smarthos
 python -m scripts.sync_rag_database       # optional immediate sync
 ```
 
@@ -540,14 +540,14 @@ curl -s http://127.0.0.1:8000/health
 ### 8.2 Website won't load in browser
 
 1. Is the VM up? Proxmox → **4020** running?
-2. On 4020: `sudo systemctl status nginx ia-medical`
+2. On 4020: `sudo systemctl status nginx smarthos`
 3. `sudo nginx -t` — fix config errors, then `sudo systemctl reload nginx`.
 4. Proxy path: on Proxmox host `curl -s http://127.0.0.1:8080/health`.
    - Fails → `systemctl status nginx` on the host; reload.
 5. From your PC: `ping 10.13.19.111` (Proxmox). If that fails, it's your office network.
 6. **White screen:** rebuild frontend —
    ```bash
-   cd /opt/ia-medical/frontend/web
+   cd /opt/smarthos/frontend/web
    rm -rf node_modules build && npm ci && REACT_APP_API_URL=/api npm run build
    sudo systemctl reload nginx
    ```
@@ -557,34 +557,34 @@ curl -s http://127.0.0.1:8000/health
 Check the backend log first:
 
 ```bash
-sudo journalctl -u ia-medical -n 50 --no-pager
+sudo journalctl -u smarthos -n 50 --no-pager
 ```
 
 Known cause — **bcrypt/passlib clash** (`password cannot be longer than 72 bytes`):
 
 ```bash
-cd /opt/ia-medical/backend && source .venv/bin/activate
+cd /opt/smarthos/backend && source .venv/bin/activate
 pip install 'bcrypt==4.0.1'
-sudo systemctl restart ia-medical
+sudo systemctl restart smarthos
 ```
 
 Wrong password (401, not 500) — reset admin:
 
 ```bash
-set -a && source /etc/ia-medical/env && set +a
+set -a && source /etc/smarthos/env && set +a
 export ADMIN_PASSWORD='NewSecurePass'
-cd /opt/ia-medical/backend && source .venv/bin/activate
+cd /opt/smarthos/backend && source .venv/bin/activate
 python scripts/setup_admin.py
 ```
 
-CORS error in browser console — make sure `/etc/ia-medical/env` `CORS_ORIGINS`
-includes `http://10.13.19.111:8080`, then `sudo systemctl restart ia-medical`.
+CORS error in browser console — make sure `/etc/smarthos/env` `CORS_ORIGINS`
+includes `http://10.13.19.111:8080`, then `sudo systemctl restart smarthos`.
 
 ### 8.4 Database connection errors
 
 ```bash
 # From 4020 — can we reach MySQL?
-mysql -h 192.168.11.10 -u rhumato_app -pApp123 rhumatoai -e "SELECT 1;"
+mysql -h 192.168.11.10 -u rhumato_app -pApp123 smarthos -e "SELECT 1;"
 ```
 
 - **Connection refused / timeout:**
@@ -610,8 +610,8 @@ curl -s http://192.168.11.30:11434/api/tags
   ss -tlnp | grep 11434     # must show *:11434
   ```
 - **Model missing:** `ollama list` on 4030; if empty `ollama pull gemma4:e4b`.
-- **Model name mismatch:** `OLLAMA_MODEL` in `/etc/ia-medical/env` must equal the
-  pulled model (`gemma4:e4b`). Fix and `sudo systemctl restart ia-medical`.
+- **Model name mismatch:** `OLLAMA_MODEL` in `/etc/smarthos/env` must equal the
+  pulled model (`gemma4:e4b`). Fix and `sudo systemctl restart smarthos`.
 - **GPU not detected:** `nvidia-smi` on 4030. If it fails, reboot; if still failing,
   check the PCI passthrough device in Proxmox Hardware (`0000:01:00.0`).
 
@@ -648,7 +648,7 @@ Start VMs in this order and verify each:
 1. **4010** (DB) → `sudo systemctl status mysql`
 2. **4030** (AI) → `curl -s http://127.0.0.1:11434/api/tags`
 3. **4020** (App) → `curl -s http://127.0.0.1:8000/health`
-4. **4020** sync → `tail -3 /opt/ia-medical/logs/rhumato-sync.log` (or run sync manually)
+4. **4020** sync → `tail -3 /opt/smarthos/logs/smarthos-sync.log` (or run sync manually)
 5. **Proxmox nginx** proxy → `curl -s http://127.0.0.1:8080/health`
 6. Browser → `http://10.13.19.111:8080` → log in → test chat.
 
@@ -666,14 +666,14 @@ Suggested names: `db-deployed`, `full-stack`, `ollama-gemma4`.
 ```bash
 # From 4020 or 4010
 mysqldump -h 192.168.11.10 -u rhumato_app -pApp123 --single-transaction \
-  rhumatoai -r /tmp/rhumatoai-$(date +%F).sql
+  smarthos -r /tmp/smarthos-$(date +%F).sql
 # then copy off the VM (scp to Proxmox, download, etc.)
 ```
 
 Restore:
 
 ```bash
-mysql -h 192.168.11.10 -u rhumato_app -pApp123 rhumatoai < /tmp/rhumatoai-YYYY-MM-DD.sql
+mysql -h 192.168.11.10 -u rhumato_app -pApp123 smarthos < /tmp/smarthos-YYYY-MM-DD.sql
 ```
 
 > On Windows, always dump with `mysqldump -r file.sql` (never PowerShell `>`, which
@@ -706,9 +706,9 @@ mysql -h 192.168.11.10 -u rhumato_app -pApp123 rhumatoai < /tmp/rhumatoai-YYYY-M
 | Dashboard “Activité Récente” shows future dates | query sorted all RDV including future | fixed: past-only filter in analytics |
 | RDV “Confirmés” counter not updating | UI updated list but not stats state | fixed: recalc stats on confirm/cancel |
 | Assistant **Copier** button dead | `navigator.clipboard` blocked on HTTP | fixed: `execCommand` fallback |
-| Cron sync log permission denied | `/var/log/` not writable by `ismailbak` | use `/opt/ia-medical/logs/rhumato-sync.log` |
+| Cron sync log permission denied | `/var/log/` not writable by `ismailbak` | use `/opt/smarthos/logs/smarthos-sync.log` |
 | Crontab line broken (`[201~` duplicated) | bracketed paste in nano | re-edit crontab; one clean line only |
-| MySQL UNION collation error | `rhumatoai` vs `rhumatoai_sec` charset mismatch | query each DB separately |
+| MySQL UNION collation error | `smarthos` vs `smarthos_sec` charset mismatch | query each DB separately |
 | Assistant empty / stale after new data | secondary not synced yet | wait for cron or run sync manually |
 
 ---
@@ -718,9 +718,9 @@ mysql -h 192.168.11.10 -u rhumato_app -pApp123 rhumatoai < /tmp/rhumatoai-YYYY-M
 When deploying at the next clinic:
 
 1. Same 3 VMs, Ubuntu 24.04, user `ismailbak`, static IPs (adjust subnet).
-2. Import latest `rhumatoai` dump into the new DB VM.
+2. Import latest `smarthos` dump into the new DB VM.
 3. `pip install -r requirements.txt` (now includes `bcrypt==4.0.1`).
-4. Set `/etc/ia-medical/env` with the new IPs, **`RAG_DATABASE_URL`**, and a **new** `SECRET_KEY`.
+4. Set `/etc/smarthos/env` with the new IPs, **`RAG_DATABASE_URL`**, and a **new** `SECRET_KEY`.
 5. Create `ia_sync` user on DB VM; run `--init-schema` sync on app VM; set cron.
 6. Ollama: `OLLAMA_HOST=0.0.0.0:11434` + `ollama pull gemma4:e4b`.
 7. GPU passthrough if a card is available; otherwise CPU (slower).
@@ -730,4 +730,4 @@ When deploying at the next clinic:
 
 ---
 
-*Last updated: Jul 2026 — primary/secondary DB sync live, RAG on `rhumatoai_sec`, cron every 10 min.*
+*Last updated: Jul 2026 — primary/secondary DB sync live, RAG on `smarthos_sec`, cron every 10 min.*

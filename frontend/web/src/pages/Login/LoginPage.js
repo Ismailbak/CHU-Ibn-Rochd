@@ -74,7 +74,7 @@ function LoginPage() {
         <div className="branding-content">
           <div className="brand-logo">
             <FiActivity />
-            <span>RhumatoAI</span>
+            <span>Smart HosHealth</span>
           </div>
           <h1>Smart Electronic Health Records</h1>
           <p>
@@ -106,7 +106,7 @@ function LoginPage() {
           </div>
         </div>
         <div className="branding-footer">
-          <p>© 2026 RhumatoAI - Tous droits réservés</p>
+          <p>© 2026 Smart HosHealth - Tous droits réservés</p>
         </div>
       </div>
 

@@ -3,12 +3,12 @@
 set -uo pipefail
 set -a
 # shellcheck disable=SC1091
-source /etc/ia-medical/env
+source /etc/smarthos/env
 set +a
-cd /opt/ia-medical/backend
+cd /opt/smarthos/backend
 # shellcheck disable=SC1091
 source .venv/bin/activate
-mkdir -p /opt/ia-medical/logs
+mkdir -p /opt/smarthos/logs
 # Do not use set -e: bidi may report phase errors but still sync patients.
 python -m scripts.sync_hoshealth_bidi --commit
 bidi_rc=$?

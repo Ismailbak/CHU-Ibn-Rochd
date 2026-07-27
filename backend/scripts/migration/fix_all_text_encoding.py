@@ -1,7 +1,7 @@
 """
-Fix mojibake in all user-visible text columns across the rhumatoai database.
+Fix mojibake in all user-visible text columns across the smarthos database.
 
-Usage (from backend/ on app VM, with DATABASE_URL pointing at rhumatoai):
+Usage (from backend/ on app VM, with DATABASE_URL pointing at smarthos):
     python -m scripts.migration.fix_all_text_encoding          # dry-run
     python -m scripts.migration.fix_all_text_encoding --commit
 """

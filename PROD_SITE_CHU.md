@@ -52,22 +52,22 @@ ss -tlnp | grep 3306
 
 ```sql
 sudo mysql
-CREATE DATABASE rhumatoai CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE rhumatoai_sec CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE smarthos CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE smarthos_sec CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE USER 'rhumato_app'@'10.10.10.3' IDENTIFIED BY 'CHOOSE_STRONG_PASSWORD';
-GRANT ALL ON rhumatoai.* TO 'rhumato_app'@'10.10.10.3';
+GRANT ALL ON smarthos.* TO 'rhumato_app'@'10.10.10.3';
 
 CREATE USER 'ia_sync'@'10.10.10.3' IDENTIFIED BY 'CHOOSE_STRONG_PASSWORD';
-GRANT ALL ON rhumatoai_sec.* TO 'ia_sync'@'10.10.10.3';
+GRANT ALL ON smarthos_sec.* TO 'ia_sync'@'10.10.10.3';
 FLUSH PRIVILEGES;
 EXIT;
 ```
 
 Import dump:
 ```bash
-sudo mysql rhumatoai < /tmp/rhumatoai-DATE.sql
-sudo mysql rhumatoai -e "SELECT COUNT(*) FROM patients;"
+sudo mysql smarthos < /tmp/smarthos-DATE.sql
+sudo mysql smarthos -e "SELECT COUNT(*) FROM patients;"
 ```
 
 ---
@@ -93,19 +93,19 @@ sudo apt install -y python3-venv nginx mysql-client git curl
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
 
-mkdir -p /opt/ia-medical && cd /opt/ia-medical
+mkdir -p /opt/smarthos && cd /opt/smarthos
 git clone https://github.com/Ismailbak/Medical-AI-Assitant.git .
 
 cd backend && python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt && pip install 'bcrypt==4.0.1'
 ```
 
-### `/etc/ia-medical/env`
+### `/etc/smarthos/env`
 
 ```bash
 APP_ENV=production
-DATABASE_URL=mysql+pymysql://rhumato_app:APP_PWD@10.10.10.5:3306/rhumatoai
-RAG_DATABASE_URL=mysql+pymysql://ia_sync:SYNC_PWD@10.10.10.5:3306/rhumatoai_sec
+DATABASE_URL=mysql+pymysql://rhumato_app:APP_PWD@10.10.10.5:3306/smarthos
+RAG_DATABASE_URL=mysql+pymysql://ia_sync:SYNC_PWD@10.10.10.5:3306/smarthos_sec
 SECRET_KEY=GENERATE_NEW_LONG_RANDOM_SECRET
 CORS_ORIGINS="http://10.10.10.3,http://192.168.1.161,http://10.3.0.161,http://192.168.1.160"
 OLLAMA_HOST=http://10.10.10.4:11434
@@ -115,12 +115,12 @@ CREATE_TABLES_ON_STARTUP=false
 ```
 
 ```bash
-sudo chmod 600 /etc/ia-medical/env
+sudo chmod 600 /etc/smarthos/env
 
-set -a && source /etc/ia-medical/env && set +a
+set -a && source /etc/smarthos/env && set +a
 alembic upgrade head
 
-cd /opt/ia-medical/frontend/web
+cd /opt/smarthos/frontend/web
 npm ci && REACT_APP_API_URL=/api npm run build
 ```
 
@@ -129,7 +129,7 @@ npm ci && REACT_APP_API_URL=/api npm run build
 ```bash
 nc -vz 10.10.10.5 3306
 nc -vz 10.10.10.4 11434
-mysql -h 10.10.10.5 -u rhumato_app -p rhumatoai -e "SELECT 1;"
+mysql -h 10.10.10.5 -u rhumato_app -p smarthos -e "SELECT 1;"
 ```
 
 ### systemd + nginx
@@ -141,7 +141,7 @@ server_name smarthoshealth.local 10.10.10.3 192.168.1.161;
 ```
 
 ```bash
-sudo systemctl enable --now ia-medical nginx
+sudo systemctl enable --now smarthos nginx
 curl -s http://127.0.0.1:8000/health; echo
 ```
 
@@ -150,16 +150,16 @@ curl -s http://127.0.0.1:8000/health; echo
 ## 4. RAG sync (on app VM)
 
 ```bash
-mkdir -p /opt/ia-medical/logs
-set -a && source /etc/ia-medical/env && set +a
-cd /opt/ia-medical/backend && source .venv/bin/activate
+mkdir -p /opt/smarthos/logs
+set -a && source /etc/smarthos/env && set +a
+cd /opt/smarthos/backend && source .venv/bin/activate
 python -m scripts.sync_rag_database --init-schema
 python -m scripts.sync_rag_database
 ```
 
 Cron:
 ```
-*/10 * * * * set -a && source /etc/ia-medical/env && set +a && cd /opt/ia-medical/backend && .venv/bin/python -m scripts.sync_rag_database >> /opt/ia-medical/logs/rhumato-sync.log 2>&1
+*/10 * * * * set -a && source /etc/smarthos/env && set +a && cd /opt/smarthos/backend && .venv/bin/python -m scripts.sync_rag_database >> /opt/smarthos/logs/smarthos-sync.log 2>&1
 ```
 
 ---
@@ -168,16 +168,16 @@ Cron:
 
 ```powershell
 # PC
-scp D:\backups\rhumatoai-DATE.sql root@10.3.0.161:/tmp/
+scp D:\backups\smarthos-DATE.sql root@10.3.0.161:/tmp/
 ```
 
 ```bash
 # Proxmox
-scp /tmp/rhumatoai-DATE.sql root@10.10.10.5:/tmp/
+scp /tmp/smarthos-DATE.sql root@10.10.10.5:/tmp/
 # or ismailbak@10.10.10.5 depending on SSH user
 
 # vm_dwh
-sudo mysql rhumatoai < /tmp/rhumatoai-DATE.sql
+sudo mysql smarthos < /tmp/smarthos-DATE.sql
 ```
 
 ---
@@ -189,14 +189,14 @@ Try in browser:
 - `http://10.10.10.3`
 - `http://10.3.0.161` (if proxied)
 
-Add the working URL to `CORS_ORIGINS` and restart `ia-medical`.
+Add the working URL to `CORS_ORIGINS` and restart `smarthos`.
 
 ---
 
 ## 7. Smoke test
 
 ```bash
-bash /opt/ia-medical/scripts/golden_path_vm.sh http://127.0.0.1:8000 'admin@email' 'password'
+bash /opt/smarthos/scripts/golden_path_vm.sh http://127.0.0.1:8000 'admin@email' 'password'
 ```
 
 Target: **17 passed, 0 failed**.

@@ -1,6 +1,6 @@
 -- MySQL dump 10.13  Distrib 8.0.45, for Win64 (x86_64)
 --
--- Host: localhost    Database: rhumatoai
+-- Host: localhost    Database: smarthos
 -- ------------------------------------------------------
 -- Server version	8.0.45
 
@@ -16,12 +16,12 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Current Database: `rhumatoai`
+-- Current Database: `smarthos`
 --
 
-CREATE DATABASE /*!32312 IF NOT EXISTS*/ `rhumatoai` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+CREATE DATABASE /*!32312 IF NOT EXISTS*/ `smarthos` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
 
-USE `rhumatoai`;
+USE `smarthos`;
 
 --
 -- Table structure for table `act_diagnoses`
@@ -1058,7 +1058,7 @@ CREATE TABLE `users` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping routines for database 'rhumatoai'
+-- Dumping routines for database 'smarthos'
 --
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
