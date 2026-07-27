@@ -1,0 +1,9 @@
+# Optional AI / RAG dependencies (Python 3.11 or 3.12 only — not 3.14)
+transformers==4.37.0
+torch==2.12.0
+sentence-transformers==2.2.2
+spacy==3.7.2
+pandas==2.1.4
+numpy==1.26.4
+ollama>=0.6.1
+qdrant-client>=1.7.0

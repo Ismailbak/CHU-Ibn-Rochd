@@ -8,7 +8,6 @@ from app.act_results.router import router as act_results_router
 from app.analytics.router import router as analytics_router
 from app.appointments.router import router as appointments_router
 from app.auth.router import router as auth_router
-from app.chat.router import router as chat_router
 from app.core.config import settings
 from app.core.database import Base, engine
 from app.core.middleware.maintenance import MaintenanceMiddleware
@@ -37,14 +36,13 @@ from app.models.additional_forms import (  # noqa: F401
 from app.models.chat_message import ChatMessage  # noqa: F401
 from app.models.chat_session import ChatSession  # noqa: F401
 from app.models.form_system import ActForm, FormCsRd, RefActType, RefCareType, RefFormType  # noqa: F401
-from app.models.llm import llm
 from app.notifications.router import router as notifications_router
 from app.patients.router import router as patients_router
 from app.search.router import router as search_router
 
 app = FastAPI(
-    title="Medical AI Assistant",
-    description="Local AI for Rheumatology EHR",
+    title="Smart HosHealth",
+    description="Rheumatology EHR",
     version="0.1.0",
 )
 
@@ -73,6 +71,7 @@ app.include_router(medical_acts_router, prefix="/api/medical-acts", tags=["medic
 app.include_router(act_results_router, prefix="/api/act-results", tags=["act-results"])
 app.include_router(forms_router, prefix="/api/forms", tags=["forms"])
 if settings.AI_ASSISTANT_ENABLED:
+    from app.chat.router import router as chat_router
     app.include_router(chat_router, prefix="/api/chat", tags=["chat"])
 app.include_router(analytics_router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(notifications_router, prefix="/api/notifications", tags=["notifications"])
@@ -104,6 +103,8 @@ def on_startup():
             log.info("AI Assistant disabled (AI_ASSISTANT_ENABLED=false). Skipping Ollama check.")
             return
 
+        from app.models.llm import llm
+
         def _check_llm():
             log.info("Checking AI Assistant (Ollama) in background...")
             if llm.load():
@@ -127,17 +128,17 @@ def on_startup():
 
 @app.get("/")
 def root():
-    return {"message": "Medical AI Assistant API"}
+    return {"message": "Smart HosHealth API"}
 
 
 @app.get("/health")
 def health():
+    ai_status = "disabled"
+    if settings.AI_ASSISTANT_ENABLED:
+        from app.models.llm import llm
+        ai_status = "ready" if llm.is_available else "unavailable"
     return {
         "status": "ok",
         "environment": settings.APP_ENV,
-        "ai_assistant": (
-            ("ready" if llm.is_available else "unavailable")
-            if settings.AI_ASSISTANT_ENABLED
-            else "disabled"
-        ),
+        "ai_assistant": ai_status,
     }
