@@ -1,4 +1,4 @@
-# Smart HosHealth — Full Day-Of Deployment Manual
+# SmartHos — Full Day-Of Deployment Manual
 
 **Use this document tomorrow.** Follow sections **in order**. Do not skip verification steps.
 
@@ -391,7 +391,7 @@ sudo nano /etc/systemd/system/smarthos.service
 
 ```ini
 [Unit]
-Description=Smart HosHealth FastAPI backend
+Description=SmartHos FastAPI backend
 After=network.target
 
 [Service]

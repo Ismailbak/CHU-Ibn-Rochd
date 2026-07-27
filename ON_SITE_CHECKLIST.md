@@ -1,4 +1,4 @@
-# Smart HosHealth — On-Site Production Checklist
+# SmartHos — On-Site Production Checklist
 
 Print or open on your phone. Fill in **Prod values** on arrival, then work top to bottom.
 

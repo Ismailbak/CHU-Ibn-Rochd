@@ -1,4 +1,4 @@
-"""Role-based access control helpers for Smart HosHealth."""
+"""Role-based access control helpers for SmartHos."""
 
 from fastapi import Depends, HTTPException, status
 

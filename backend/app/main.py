@@ -41,7 +41,7 @@ from app.patients.router import router as patients_router
 from app.search.router import router as search_router
 
 app = FastAPI(
-    title="Smart HosHealth",
+    title="SmartHos",
     description="Rheumatology EHR",
     version="0.1.0",
 )
@@ -128,7 +128,7 @@ def on_startup():
 
 @app.get("/")
 def root():
-    return {"message": "Smart HosHealth API"}
+    return {"message": "SmartHos API"}
 
 
 @app.get("/health")

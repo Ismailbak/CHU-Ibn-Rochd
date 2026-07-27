@@ -1,4 +1,4 @@
-# CHU Ibn Rochd — Production Site (Smart HosHealth)
+# CHU Ibn Rochd — Production Site (SmartHos)
 
 **On-site reference.** Inter-VM traffic uses **vmbr2** (`10.10.10.0/24`). Align VM NICs with **vmbr1** (local) + **vmbr2** (VM bridge).
 

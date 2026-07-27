@@ -4,7 +4,7 @@ function PrivacyContent() {
   return (
     <>
       <p className="legal-notice">
-        La présente politique informe les utilisateurs professionnels de Smart HosHealth sur la
+        La présente politique informe les utilisateurs professionnels de SmartHos sur la
         manière dont l&apos;établissement de santé hôte — Service de Rhumatologie traite les
         données à caractère personnel, et notamment les{' '}
         <strong>données de santé</strong>, conformément à la{' '}
@@ -38,7 +38,7 @@ function PrivacyContent() {
 
       <section>
         <h2>2. Données collectées</h2>
-        <p>Selon les fonctionnalités utilisées, Smart HosHealth peut traiter les catégories de données suivantes :</p>
+        <p>Selon les fonctionnalités utilisées, SmartHos peut traiter les catégories de données suivantes :</p>
 
         <h3>2.1 Données des patients (données de santé)</h3>
         <ul>
@@ -101,7 +101,7 @@ function PrivacyContent() {
           Le moteur d&apos;IA (Ollama) fonctionne sur un serveur dédié au sein du même
           environnement local. <strong>Aucune donnée patient n&apos;est transmise à des
           services d&apos;IA cloud publics</strong> (OpenAI, Google, etc.) dans la
-          configuration de production décrite pour Smart HosHealth.
+          configuration de production décrite pour SmartHos.
         </p>
       </section>
 
@@ -110,7 +110,7 @@ function PrivacyContent() {
         <p>
           Conformément à la Loi 09-08, tout transfert de données à caractère personnel vers
           un pays étranger requiert en principe une autorisation de la CNDP, sauf exceptions
-          prévues par la loi. La configuration standard de Smart HosHealth vise le{' '}
+          prévues par la loi. La configuration standard de SmartHos vise le{' '}
           <strong>traitement et le stockage au Maroc</strong>. Tout projet de transfert
           transfrontière devra faire l&apos;objet d&apos;une analyse préalable et des
           formalités CNDP requises.
@@ -179,7 +179,7 @@ function PrivacyContent() {
       <section>
         <h2>9. Cookies et traceurs</h2>
         <p>
-          Smart HosHealth utilise des mécanismes de session strictement nécessaires au
+          SmartHos utilise des mécanismes de session strictement nécessaires au
           fonctionnement (token d&apos;authentification stocké localement dans le navigateur).
           Aucun cookie publicitaire ou de profilage à des fins commerciales n&apos;est déployé
           dans la version on-premise destinée au personnel hospitalier.
@@ -209,12 +209,12 @@ function PrivacyContent() {
         <h2>12. Contact</h2>
         <p>
           Pour toute question relative à la protection des données ou à l&apos;utilisation de
-          Smart HosHealth, contactez <strong>l&apos;administration de l&apos;établissement</strong>.
+          SmartHos, contactez <strong>l&apos;administration de l&apos;établissement</strong>.
         </p>
       </section>
 
       <p className="legal-footer">
-        Document établi pour Smart HosHealth — usage professionnel interne. Il complète
+        Document établi pour SmartHos — usage professionnel interne. Il complète
         les politiques internes de l&apos;établissement et ne dispense pas d&apos;une
         déclaration ou autorisation CNDP le cas échéant. Validation juridique recommandée
         avant publication officielle.

@@ -74,9 +74,9 @@ function LoginPage() {
         <div className="branding-content">
           <div className="brand-logo">
             <FiActivity />
-            <span>Smart HosHealth</span>
+            <span>SmartHos</span>
           </div>
-          <h1>Smart Electronic Health Records</h1>
+          <h1>Smart Hospital EHR</h1>
           <p>
             Optimisez votre pratique médicale avec notre assistant intelligent. 
             Gestion des patients, aide au diagnostic et suivi personnalisé.
@@ -106,7 +106,7 @@ function LoginPage() {
           </div>
         </div>
         <div className="branding-footer">
-          <p>© 2026 Smart HosHealth - Tous droits réservés</p>
+          <p>© 2026 SmartHos - Tous droits réservés</p>
         </div>
       </div>
 

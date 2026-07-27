@@ -12,7 +12,7 @@ function TermsContent({ privacyLink = true }) {
     <>
       <p className="legal-notice">
         Les présentes conditions régissent l&apos;accès et l&apos;utilisation de la plateforme
-        <strong> Smart HosHealth</strong>, déployée au sein de l&apos;établissement de santé hôte —
+        <strong> SmartHos</strong>, déployée au sein de l&apos;établissement de santé hôte —
         Service de Rhumatologie. Elles s&apos;adressent exclusivement au personnel autorisé et
         aux utilisateurs professionnels habilités.
       </p>
@@ -20,7 +20,7 @@ function TermsContent({ privacyLink = true }) {
       <section>
         <h2>1. Objet et acceptation</h2>
         <p>
-          Smart HosHealth est une application d&apos;aide à la gestion du dossier patient et d&apos;assistance
+          SmartHos est une application d&apos;aide à la gestion du dossier patient et d&apos;assistance
           par intelligence artificielle, destinée à un usage professionnel dans un établissement de
           santé. En créant un compte ou en accédant au service, vous déclarez avoir pris connaissance
           des présentes conditions générales d&apos;utilisation (CGU) et de la{' '}
@@ -51,7 +51,7 @@ function TermsContent({ privacyLink = true }) {
 
       <section>
         <h2>3. Description du service</h2>
-        <p>Smart HosHealth permet notamment :</p>
+        <p>SmartHos permet notamment :</p>
         <ul>
           <li>la consultation et la gestion des dossiers patients (identité, antécédents, actes, rendez-vous, résultats) ;</li>
           <li>la saisie et le suivi des actes médicaux et traitements ;</li>
@@ -76,7 +76,7 @@ function TermsContent({ privacyLink = true }) {
         </ul>
         <h3>4.1 Mot de passe oublié et réinitialisation</h3>
         <p>
-          Smart HosHealth ne propose pas de réinitialisation automatique par e-mail (service
+          SmartHos ne propose pas de réinitialisation automatique par e-mail (service
           hébergé on-premise). En cas d&apos;oubli de mot de passe, l&apos;utilisateur peut :
         </p>
         <ul>
@@ -94,7 +94,7 @@ function TermsContent({ privacyLink = true }) {
         <h2>5. Usage autorisé et obligations de l&apos;utilisateur</h2>
         <p>L&apos;utilisateur s&apos;engage à :</p>
         <ul>
-          <li>utiliser Smart HosHealth uniquement dans le cadre de ses fonctions professionnelles et conformément au secret médical ;</li>
+          <li>utiliser SmartHos uniquement dans le cadre de ses fonctions professionnelles et conformément au secret médical ;</li>
           <li>respecter la <strong>Loi n° 09-08</strong> relative à la protection des personnes physiques à l&apos;égard du traitement des données à caractère personnel, le <strong>Code de déontologie médicale (Loi n° 131-13)</strong> et les textes applicables au Maroc ;</li>
           <li>ne consulter que les dossiers patients pour lesquels il existe une justification professionnelle légitime ;</li>
           <li>ne pas extraire, copier ou diffuser des données patients en dehors des circuits autorisés par l&apos;établissement ;</li>
@@ -113,7 +113,7 @@ function TermsContent({ privacyLink = true }) {
         <ul>
           <li>Les réponses générées peuvent contenir des erreurs, des omissions ou des informations incomplètes.</li>
           <li>L&apos;utilisateur doit <strong>vérifier systématiquement</strong> toute information avant de la utiliser pour une décision thérapeutique, diagnostique ou administrative.</li>
-          <li>Smart HosHealth ne constitue pas un dispositif médical certifié au sens des réglementations sur les dispositifs médicaux ; sa vocation est l&apos;organisation du dossier et l&apos;assistance documentaire.</li>
+          <li>SmartHos ne constitue pas un dispositif médical certifié au sens des réglementations sur les dispositifs médicaux ; sa vocation est l&apos;organisation du dossier et l&apos;assistance documentaire.</li>
           <li>Les échanges avec l&apos;assistant peuvent être enregistrés à des fins de traçabilité, d&apos;audit et d&apos;amélioration du service, dans le respect de la politique de confidentialité.</li>
         </ul>
       </section>
@@ -121,7 +121,7 @@ function TermsContent({ privacyLink = true }) {
       <section>
         <h2>7. Propriété intellectuelle</h2>
         <p>
-          L&apos;interface, le code, la marque Smart HosHealth, la documentation et les éléments
+          L&apos;interface, le code, la marque SmartHos, la documentation et les éléments
           graphiques sont protégés par le droit de la propriété intellectuelle. Toute
           reproduction, modification ou exploitation non autorisée est interdite.
         </p>
@@ -197,7 +197,7 @@ function TermsContent({ privacyLink = true }) {
       </section>
 
       <p className="legal-footer">
-        Document établi pour Smart HosHealth — Service de Rhumatologie.
+        Document établi pour SmartHos — Service de Rhumatologie.
         Validation par le service juridique de l&apos;établissement recommandée avant
         publication officielle.
       </p>

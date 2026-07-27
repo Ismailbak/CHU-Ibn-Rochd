@@ -40,11 +40,11 @@ function ForgotPasswordPage() {
         <div className="branding-content">
           <div className="brand-logo">
             <FiActivity />
-            <span>Smart HosHealth</span>
+            <span>SmartHos</span>
           </div>
           <h1>Récupération de compte</h1>
           <p>
-            Smart HosHealth est hébergé en local au sein de l&apos;établissement. La réinitialisation du mot de
+            SmartHos est hébergé en local au sein de l&apos;établissement. La réinitialisation du mot de
             passe est assurée par l&apos;administration, après vérification de votre identité.
           </p>
           <div className="brand-features">
@@ -65,7 +65,7 @@ function ForgotPasswordPage() {
           </div>
         </div>
         <div className="branding-footer">
-          <p>© 2026 Smart HosHealth - Tous droits réservés</p>
+          <p>© 2026 SmartHos - Tous droits réservés</p>
         </div>
       </div>
 
@@ -98,7 +98,7 @@ function ForgotPasswordPage() {
                 <h3>Étapes suivantes</h3>
                 <ol>
                   <li>
-                    <FiUser /> Un administrateur Smart HosHealth traitera votre demande (délai
+                    <FiUser /> Un administrateur SmartHos traitera votre demande (délai
                     habituel : sous 24 h ouvrées).
                   </li>
                   <li>

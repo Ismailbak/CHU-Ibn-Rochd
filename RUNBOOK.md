@@ -1,6 +1,6 @@
-# Smart HosHealth — On-Prem Operations Runbook
+# SmartHos — On-Prem Operations Runbook
 
-Complete reference for the **3-VM Smart HosHealth deployment** on Proxmox (test site).
+Complete reference for the **3-VM SmartHos deployment** on Proxmox (test site).
 Covers architecture, every VM, the deployment process, day-to-day commands, a user
 guide, and **what to do when things break**.
 
@@ -148,7 +148,7 @@ CREATE_TABLES_ON_STARTUP=false
 
 ```ini
 [Unit]
-Description=Smart HosHealth FastAPI backend
+Description=SmartHos FastAPI backend
 After=network.target
 
 [Service]

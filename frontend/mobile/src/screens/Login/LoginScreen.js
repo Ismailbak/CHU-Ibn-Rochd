@@ -75,7 +75,7 @@ export default function LoginScreen({ navigation }) {
         </View>
 
         <Text style={styles.terms}>
-          En continuant, vous acceptez les conditions d'utilisation et la politique de confidentialité de Smart HosHealth.
+          En continuant, vous acceptez les conditions d'utilisation et la politique de confidentialité de SmartHos.
         </Text>
       </KeyboardAvoidingView>
     </PhoneShell>
